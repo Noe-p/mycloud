@@ -5,7 +5,8 @@
     "close": "Close"
   },
   "home": {
-    "allImagesLoaded": "All images loaded ({count} in total)"
+    "allImagesLoaded": "All images loaded ({count} in total)",
+    "scanningInProgress": "Generating thumbnails..."
   },
   "status": "Available for work",
   "position": "Fullstack Developer",

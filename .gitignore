@@ -7,6 +7,8 @@
 .env
 .env.production
 /public/thumbs
+/public/scan.lock
+/public/scan-state.json
 
 # testing
 /coverage

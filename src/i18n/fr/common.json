@@ -5,7 +5,8 @@
     "close": "Fermer"
   },
   "home": {
-    "allImagesLoaded": "Toutes les photos ont été chargées ({count} au total)"
+    "allImagesLoaded": "Toutes les photos ont été chargées ({count} au total)",
+    "scanningInProgress": "Génération des miniatures en cours..."
   },
   "navbar": {
     "title": "Photothèque",

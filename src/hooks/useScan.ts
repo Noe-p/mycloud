@@ -3,13 +3,15 @@
 import { useAppContext } from '@/contexts';
 import { MediaCounts } from '@/contexts/AppContext';
 import { Media } from '@/types/Media';
-import { ScanResponse } from '@/types/Scan';
+import { ScanResponse, ScanState } from '@/types/Scan';
 import React from 'react';
 
 export function useScan() {
   const [loading, setLoading] = React.useState(false);
+  const [scanState, setScanState] = React.useState<ScanState | null>(null);
   const { setMediaCounts } = useAppContext();
   const pollingRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const scanPollingRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const isFetchingRef = React.useRef(false);
 
   type ThumbsResponse = {
@@ -87,8 +89,23 @@ export function useScan() {
         clearInterval(pollingRef.current);
         pollingRef.current = null;
       }
+      if (scanPollingRef.current) {
+        clearInterval(scanPollingRef.current);
+        scanPollingRef.current = null;
+      }
     };
   }, []);
+
+  const fetchScanState = async (): Promise<ScanState | null> => {
+    try {
+      const res = await fetch('/api/scan', { method: 'GET' });
+      const json: unknown = await res.json();
+      return json as ScanState;
+    } catch (e) {
+      console.error('Erreur fetch scan state:', e);
+      return null;
+    }
+  };
 
   const isScanResponse = (val: unknown): val is ScanResponse => {
     return (
@@ -101,6 +118,29 @@ export function useScan() {
 
     // Récupérer la liste initiale pour créer les placeholders
     await fetchThumbs(true);
+
+    // Start polling scan state to track progress
+    if (!scanPollingRef.current) {
+      scanPollingRef.current = setInterval(() => {
+        void (async () => {
+          const state = await fetchScanState();
+          if (state) {
+            setScanState(state);
+            // Émettre un événement pour afficher la progression
+            window.dispatchEvent(
+              new CustomEvent('scanProgress', {
+                detail: state,
+              }),
+            );
+            // Arrêter le polling si le scan est terminé
+            if (!state.isScanning && scanPollingRef.current) {
+              clearInterval(scanPollingRef.current);
+              scanPollingRef.current = null;
+            }
+          }
+        })();
+      }, 500); // Vérifier toutes les 500ms
+    }
 
     // Start polling thumbs while scan is running
     if (!pollingRef.current) {
@@ -123,15 +163,22 @@ export function useScan() {
       }
     }
     const thumbs = await fetchThumbs(true);
+
     // Stop polling after scan completes
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
     }
+    if (scanPollingRef.current) {
+      clearInterval(scanPollingRef.current);
+      scanPollingRef.current = null;
+    }
+
+    setScanState(null);
     setLoading(false);
 
     return thumbs;
   };
 
-  return { handleScan, fetchThumbs, loading };
+  return { handleScan, fetchThumbs, loading, scanState };
 }

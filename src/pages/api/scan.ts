@@ -1,3 +1,4 @@
+import { ScanState } from '@/types/Scan';
 import crypto from 'crypto';
 import fs from 'fs';
 import { NextApiRequest, NextApiResponse } from 'next';
@@ -6,6 +7,8 @@ import sharp from 'sharp';
 
 const mediaDir = process.env.MEDIA_DIR || '';
 const thumbDir = process.env.THUMB_DIR || '';
+const scanLockPath = path.join(process.cwd(), 'public', 'scan.lock');
+const scanStatePath = path.join(process.cwd(), 'public', 'scan-state.json');
 
 // Fonction pour créer un identifiant unique basé sur le chemin
 function getFileId(relativePath: string): string {
@@ -92,88 +95,230 @@ async function generateVideoThumb(srcPath: string, destPath: string) {
   });
 }
 
+// Fonction pour écrire l'état du scan
+function writeScanState(state: {
+  isScanning: boolean;
+  progress: number;
+  scanned: number;
+  total: number;
+  imagesCount: number;
+  videosCount: number;
+  deletedThumbs: number;
+  startedAt?: string;
+  completedAt?: string;
+}) {
+  try {
+    fs.writeFileSync(scanStatePath, JSON.stringify(state, null, 2));
+  } catch (e) {
+    console.error('Erreur écriture scan state:', e);
+  }
+}
+
+// Fonction pour lire l'état du scan
+function readScanState(): ScanState | null {
+  try {
+    if (fs.existsSync(scanStatePath)) {
+      const content = fs.readFileSync(scanStatePath, 'utf-8');
+      return JSON.parse(content) as ScanState;
+    }
+  } catch (e) {
+    console.error('Erreur lecture scan state:', e);
+  }
+  return null;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // GET: Retourner l'état actuel du scan
+  if (req.method === 'GET') {
+    const state = readScanState();
+    if (state) {
+      return res.status(200).json(state);
+    }
+    return res.status(200).json({
+      isScanning: false,
+      progress: 0,
+      scanned: 0,
+      total: 0,
+      imagesCount: 0,
+      videosCount: 0,
+      deletedThumbs: 0,
+    });
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Vérifier si un scan est déjà en cours
+  if (fs.existsSync(scanLockPath)) {
+    const state = readScanState();
+    return res.status(409).json({
+      error: 'Scan already in progress',
+      state,
+    });
+  }
+
   if (!mediaDir || !thumbDir) {
     return res.status(500).json({ error: 'MEDIA_DIR or THUMB_DIR not set' });
   }
 
-  // Scanner récursivement tous les fichiers
-  const allFiles = getAllFiles(mediaDir);
+  // Créer le fichier lock
+  try {
+    fs.writeFileSync(scanLockPath, new Date().toISOString());
+  } catch (e) {
+    console.error('Erreur création lock:', e);
+  }
 
-  // Filtrer pour ne garder que les médias
-  const mediaFiles = allFiles.filter((filePath) => {
-    const fileName = path.basename(filePath);
-    return isImage(fileName) || isVideo(fileName);
-  });
+  const startedAt = new Date().toISOString();
 
-  // Créer un Set des fileIds valides pour comparaison rapide
-  const validFileIds = new Set<string>();
-  mediaFiles.forEach((filePath) => {
-    const relativePath = path.relative(mediaDir, filePath);
-    const fileId = getFileId(relativePath);
-    validFileIds.add(fileId);
-  });
+  try {
+    // Scanner récursivement tous les fichiers
+    const allFiles = getAllFiles(mediaDir);
 
-  // Supprimer les thumbs orphelins (dont le média source n'existe plus)
-  let deletedThumbs = 0;
-  if (fs.existsSync(thumbDir)) {
-    const thumbFiles = fs.readdirSync(thumbDir);
-    for (const thumbFile of thumbFiles) {
-      if (thumbFile.endsWith('.thumb.jpg')) {
-        // Extraire le fileId du nom du thumb
-        const fileId = thumbFile.replace('.thumb.jpg', '');
-        // Si le fileId n'existe pas dans les médias valides, supprimer le thumb
-        if (!validFileIds.has(fileId)) {
-          const thumbPath = path.join(thumbDir, thumbFile);
-          try {
-            fs.unlinkSync(thumbPath);
-            deletedThumbs++;
-            console.log('Thumb orphelin supprimé:', thumbFile);
-          } catch (e) {
-            console.error('Erreur suppression thumb orphelin', thumbFile, ':', e);
+    // Filtrer pour ne garder que les médias
+    const mediaFiles = allFiles.filter((filePath) => {
+      const fileName = path.basename(filePath);
+      return isImage(fileName) || isVideo(fileName);
+    });
+
+    // Créer un Set des fileIds valides pour comparaison rapide
+    const validFileIds = new Set<string>();
+    mediaFiles.forEach((filePath) => {
+      const relativePath = path.relative(mediaDir, filePath);
+      const fileId = getFileId(relativePath);
+      validFileIds.add(fileId);
+    });
+
+    // Supprimer les thumbs orphelins (dont le média source n'existe plus)
+    let deletedThumbs = 0;
+    if (fs.existsSync(thumbDir)) {
+      const thumbFiles = fs.readdirSync(thumbDir);
+      for (const thumbFile of thumbFiles) {
+        if (thumbFile.endsWith('.thumb.jpg')) {
+          // Extraire le fileId du nom du thumb
+          const fileId = thumbFile.replace('.thumb.jpg', '');
+          // Si le fileId n'existe pas dans les médias valides, supprimer le thumb
+          if (!validFileIds.has(fileId)) {
+            const thumbPath = path.join(thumbDir, thumbFile);
+            try {
+              fs.unlinkSync(thumbPath);
+              deletedThumbs++;
+              console.log('Thumb orphelin supprimé:', thumbFile);
+            } catch (e) {
+              console.error('Erreur suppression thumb orphelin', thumbFile, ':', e);
+            }
           }
         }
       }
     }
-  }
 
-  const imagesCount = mediaFiles.filter((f) => isImage(path.basename(f))).length;
-  const videosCount = mediaFiles.filter((f) => isVideo(path.basename(f))).length;
-  const total = imagesCount + videosCount;
-  let scanned = 0;
+    const imagesCount = mediaFiles.filter((f) => isImage(path.basename(f))).length;
+    const videosCount = mediaFiles.filter((f) => isVideo(path.basename(f))).length;
+    const total = imagesCount + videosCount;
+    let scanned = 0;
 
-  for (const srcPath of mediaFiles) {
-    const fileName = path.basename(srcPath);
-    // Créer un nom unique pour le thumb basé sur le chemin relatif
-    const relativePath = path.relative(mediaDir, srcPath);
-    const fileId = getFileId(relativePath);
-    const thumbPath = path.join(thumbDir, `${fileId}.thumb.jpg`);
+    // État initial du scan
+    writeScanState({
+      isScanning: true,
+      progress: 0,
+      scanned: 0,
+      total,
+      imagesCount,
+      videosCount,
+      deletedThumbs,
+      startedAt,
+    });
 
-    if (isImage(fileName) && !fs.existsSync(thumbPath)) {
-      try {
-        console.log('Génération thumb pour:', relativePath);
-        await generateThumb(srcPath, thumbPath);
-        scanned++;
-      } catch (e) {
-        console.error('Erreur génération thumb pour', relativePath, ':', e);
+    for (const srcPath of mediaFiles) {
+      const fileName = path.basename(srcPath);
+      // Créer un nom unique pour le thumb basé sur le chemin relatif
+      const relativePath = path.relative(mediaDir, srcPath);
+      const fileId = getFileId(relativePath);
+      const thumbPath = path.join(thumbDir, `${fileId}.thumb.jpg`);
+
+      if (isImage(fileName) && !fs.existsSync(thumbPath)) {
+        try {
+          console.log('Génération thumb pour:', relativePath);
+          await generateThumb(srcPath, thumbPath);
+          scanned++;
+          // Mettre à jour la progression
+          writeScanState({
+            isScanning: true,
+            progress: Math.round((scanned / total) * 100),
+            scanned,
+            total,
+            imagesCount,
+            videosCount,
+            deletedThumbs,
+            startedAt,
+          });
+        } catch (e) {
+          console.error('Erreur génération thumb pour', relativePath, ':', e);
+        }
+      }
+      if (isVideo(fileName) && !fs.existsSync(thumbPath)) {
+        try {
+          console.log('Génération thumb vidéo pour:', relativePath);
+          await generateVideoThumb(srcPath, thumbPath);
+          scanned++;
+          // Mettre à jour la progression
+          writeScanState({
+            isScanning: true,
+            progress: Math.round((scanned / total) * 100),
+            scanned,
+            total,
+            imagesCount,
+            videosCount,
+            deletedThumbs,
+            startedAt,
+          });
+        } catch (e) {
+          console.error('Erreur génération thumb vidéo pour', relativePath, ':', e);
+        }
       }
     }
-    if (isVideo(fileName) && !fs.existsSync(thumbPath)) {
-      try {
-        console.log('Génération thumb vidéo pour:', relativePath);
-        await generateVideoThumb(srcPath, thumbPath);
-        scanned++;
-      } catch (e) {
-        console.error('Erreur génération thumb vidéo pour', relativePath, ':', e);
-      }
-    }
-  }
 
-  console.log(
-    `Scan terminé: ${scanned} thumbs générés, ${deletedThumbs} thumbs orphelins supprimés`,
-  );
-  res.status(200).json({ scanned, total, imagesCount, videosCount, deletedThumbs });
+    const completedAt = new Date().toISOString();
+
+    // État final du scan
+    writeScanState({
+      isScanning: false,
+      progress: 100,
+      scanned,
+      total,
+      imagesCount,
+      videosCount,
+      deletedThumbs,
+      startedAt,
+      completedAt,
+    });
+
+    console.log(
+      `Scan terminé: ${scanned} thumbs générés, ${deletedThumbs} thumbs orphelins supprimés`,
+    );
+
+    // Supprimer le lock
+    if (fs.existsSync(scanLockPath)) {
+      fs.unlinkSync(scanLockPath);
+    }
+
+    res.status(200).json({ scanned, total, imagesCount, videosCount, deletedThumbs });
+  } catch (error) {
+    // En cas d'erreur, supprimer le lock et mettre à jour l'état
+    if (fs.existsSync(scanLockPath)) {
+      fs.unlinkSync(scanLockPath);
+    }
+    writeScanState({
+      isScanning: false,
+      progress: 0,
+      scanned: 0,
+      total: 0,
+      imagesCount: 0,
+      videosCount: 0,
+      deletedThumbs: 0,
+      completedAt: new Date().toISOString(),
+    });
+    console.error('Erreur lors du scan:', error);
+    res.status(500).json({ error: 'Scan failed' });
+  }
 }

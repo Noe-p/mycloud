@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 
 import { useAppContext } from '@/contexts';
 import { useScan } from '@/hooks/useScan';
+import { ScanState } from '@/types/Scan';
 import { MoreVertical, Scan } from 'lucide-react';
 import React from 'react';
 import { Button } from './ui/button';
@@ -18,6 +19,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from './ui/drawer';
+import { Progress } from './ui/progress';
 import { H1, P16 } from './utils/Texts';
 
 interface NavBarProps {
@@ -29,22 +31,33 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
   const { mediaCounts } = useAppContext();
   const { handleScan, loading } = useScan();
   const [open, setOpen] = React.useState(false);
+  const [scanProgress, setScanProgress] = React.useState<ScanState | null>(null);
+
+  // Écouter les événements de progression du scan
+  React.useEffect(() => {
+    const handleScanProgress = (event: CustomEvent<ScanState>) => {
+      setScanProgress(event.detail);
+    };
+
+    window.addEventListener('scanProgress', handleScanProgress as EventListener);
+
+    return () => {
+      window.removeEventListener('scanProgress', handleScanProgress as EventListener);
+    };
+  }, []);
 
   const onScan = async () => {
-    await handleScan();
     setOpen(false);
+    await handleScan();
   };
 
   return (
     <nav
-      className={cn(
-        'fixed top-0 left-0 w-full h-22 z-50 bg-background/40 backdrop-blur-sm',
-        className,
-      )}
+      className={cn('fixed top-0 left-0 w-full z-50 bg-background/40 backdrop-blur-sm', className)}
       role="navigation"
       aria-label="Main navigation"
     >
-      <Row className="max-w-7xl mx-auto px-4 md:px-8 lg:px-16 items-center h-full justify-between">
+      <Row className="max-w-7xl mx-auto px-4 md:px-8 lg:px-16 items-center h-22 justify-between">
         <Col>
           <H1 className="">{tCommons('navbar.title')}</H1>
           <P16 className="">{tCommons('navbar.nbElements', { count: mediaCounts.total })}</P16>
@@ -81,6 +94,19 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
           </DrawerContent>
         </Drawer>
       </Row>
+
+      {/* Barre de progression du scan */}
+      {scanProgress && scanProgress.isScanning && (
+        <div className=" px-4 justify-center pb-2">
+          <div className="flex items-center justify-between pb-2 text-xs">
+            <span className="text-muted-black">{tCommons('home.scanningInProgress')}</span>
+            <span className="text-muted-black font-medium">
+              {`${scanProgress.scanned}/${scanProgress.total}`}
+            </span>
+          </div>
+          <Progress value={scanProgress.progress} className="h-1" />
+        </div>
+      )}
     </nav>
   );
 }
