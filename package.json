@@ -1,9 +1,9 @@
 {
-  "name": "portfolio",
+  "name": "Mycloud",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
+  "description": "Icloud pour raspberry PI",  "scripts": {
+  "author": "Noé PHilippe <noephilippe29@gmail.com>",    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -21,6 +21,7 @@
     "next-intl": "^4.1.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "sharp": "^0.34.4",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "usehooks-ts": "^3.1.1"

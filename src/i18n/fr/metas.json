@@ -3,10 +3,5 @@
     "title": "Template Next.js — Portfolio Moderne & Vitrine de Projets",
     "description": "Un template Next.js moderne pour les développeurs afin de présenter leur portfolio et projets. Construit avec TypeScript, Tailwind CSS et les meilleures pratiques pour les performances et le SEO.",
     "keywords": "template Next.js, template portfolio, template développeur, TypeScript, Tailwind CSS, template web moderne, template React, template optimisé SEO"
-  },
-  "projects": {
-    "title": "Projets — Template Portfolio Next.js",
-    "description": "Présentez vos projets web avec ce template Next.js moderne. Fonctionnalités : design responsive, animations fluides et performances optimisées pour la meilleure expérience utilisateur.",
-    "keywords": "template Next.js, vitrine projets, template portfolio, template web moderne, design responsive, portfolio développeur, template projets web"
   }
 }

@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Host
-Host: https://your-domain.com
+Host: https://https://mycloud.noe-philippe.fr
 
 # Sitemaps
-Sitemap: https://your-domain.com/sitemap.xml 
+Sitemap: https://https://mycloud.noe-philippe.fr/sitemap.xml 

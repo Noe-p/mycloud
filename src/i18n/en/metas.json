@@ -3,10 +3,5 @@
     "title": "Next.js Template — Modern Portfolio & Projects Showcase",
     "description": "A modern Next.js template for developers to showcase their portfolio and projects. Built with TypeScript, Tailwind CSS, and best practices for performance and SEO.",
     "keywords": "Next.js template, portfolio template, developer template, TypeScript, Tailwind CSS, modern web template, React template, SEO optimized template"
-  },
-  "projects": {
-    "title": "Projects — Next.js Template Portfolio",
-    "description": "Showcase your web projects with this modern Next.js template. Features responsive design, smooth animations, and optimized performance for the best user experience.",
-    "keywords": "Next.js template, project showcase, portfolio template, modern web template, responsive design, developer portfolio, web projects template"
   }
 }
