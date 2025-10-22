@@ -2,6 +2,7 @@
 import { cn } from '@/services/utils';
 import { Col } from '@/static/styles/Flex';
 import React, { ReactNode } from 'react';
+import { Footer } from '../Footer';
 import { NavBar } from '../NavBar';
 
 interface LayoutProps {
@@ -16,7 +17,7 @@ export function Layout(props: LayoutProps): React.JSX.Element {
     <Col className={cn('bg-background text-foreground', className)}>
       <NavBar />
       <Page>{children}</Page>
-      {/* <Footer /> */}
+      <Footer />
     </Col>
   );
 }

@@ -23,14 +23,14 @@ export function MediaGrid({ medias }: MediaGridProps): React.JSX.Element {
   };
 
   // Extraire les URLs complètes des médias pour le fullscreen
-  const mediaUrls = medias.map((media) => `/api/media/${media.file}`);
+  const mediaUrls = medias.map((media) => `/api/media/${media.fileId || media.file}`);
 
   return (
     <>
       <Grid10>
-        {medias.map(({ file, thumb, type, duration, thumbReady }, index) => (
+        {medias.map(({ file, fileId, thumb, type, duration, thumbReady }, index) => (
           <div
-            key={file}
+            key={fileId || file}
             className="aspect-square bg-gray-100 overflow-hidden flex items-center justify-center relative rounded cursor-pointer hover:opacity-90 transition-opacity"
             onClick={() => handleMediaClick(index)}
           >

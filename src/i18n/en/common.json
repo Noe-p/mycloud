@@ -4,7 +4,9 @@
     "privacyPolicy": "Privacy Policy",
     "close": "Close"
   },
-  "home": {},
+  "home": {
+    "allImagesLoaded": "All images loaded ({count} in total)"
+  },
   "status": "Available for work",
   "position": "Fullstack Developer",
   "navbar": {

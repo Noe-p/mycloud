@@ -39,7 +39,7 @@ export function useScan() {
         const sorted = [...json.thumbs].sort((a, b) => {
           const at = a.createdAt ? Date.parse(a.createdAt) : 0;
           const bt = b.createdAt ? Date.parse(b.createdAt) : 0;
-          return at - bt; // oldest first, newest last
+          return bt - at; // newest first, oldest last
         });
         setMediaCounts(computeCounts(sorted));
         // Stop polling early if all thumbnails are ready

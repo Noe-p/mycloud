@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import fs from 'fs';
 import { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
@@ -5,6 +6,34 @@ import sharp from 'sharp';
 
 const mediaDir = process.env.MEDIA_DIR || '';
 const thumbDir = process.env.THUMB_DIR || '';
+
+// Fonction pour créer un identifiant unique basé sur le chemin
+function getFileId(relativePath: string): string {
+  return crypto.createHash('sha256').update(relativePath).digest('hex').substring(0, 16);
+}
+
+// Fonction pour scanner récursivement tous les fichiers
+function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
+  const files = fs.readdirSync(dirPath);
+
+  files.forEach((file) => {
+    const filePath = path.join(dirPath, file);
+
+    // Exclure les bibliothèques Photos et autres dossiers système
+    if (file.endsWith('.photoslibrary') || file.startsWith('.')) {
+      return;
+    }
+
+    if (fs.statSync(filePath).isDirectory()) {
+      // Récursion dans les sous-dossiers
+      arrayOfFiles = getAllFiles(filePath, arrayOfFiles);
+    } else {
+      arrayOfFiles.push(filePath);
+    }
+  });
+
+  return arrayOfFiles;
+}
 
 function isImage(file: string) {
   return /\.(jpg|jpeg|png|gif|heic)$/i.test(file);
@@ -70,30 +99,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!mediaDir || !thumbDir) {
     return res.status(500).json({ error: 'MEDIA_DIR or THUMB_DIR not set' });
   }
-  const files = fs.readdirSync(mediaDir);
-  const imagesCount = files.filter((f) => isImage(f)).length;
-  const videosCount = files.filter((f) => isVideo(f)).length;
+
+  // Scanner récursivement tous les fichiers
+  const allFiles = getAllFiles(mediaDir);
+
+  // Filtrer pour ne garder que les médias
+  const mediaFiles = allFiles.filter((filePath) => {
+    const fileName = path.basename(filePath);
+    return isImage(fileName) || isVideo(fileName);
+  });
+
+  const imagesCount = mediaFiles.filter((f) => isImage(path.basename(f))).length;
+  const videosCount = mediaFiles.filter((f) => isVideo(path.basename(f))).length;
   const total = imagesCount + videosCount;
   let scanned = 0;
-  for (const file of files) {
-    const srcPath = path.join(mediaDir, file);
-    const thumbPath = path.join(thumbDir, file + '.thumb.jpg');
-    if (isImage(file) && !fs.existsSync(thumbPath)) {
+
+  for (const srcPath of mediaFiles) {
+    const fileName = path.basename(srcPath);
+    // Créer un nom unique pour le thumb basé sur le chemin relatif
+    const relativePath = path.relative(mediaDir, srcPath);
+    const fileId = getFileId(relativePath);
+    const thumbPath = path.join(thumbDir, `${fileId}.thumb.jpg`);
+
+    if (isImage(fileName) && !fs.existsSync(thumbPath)) {
       try {
-        console.log('Génération thumb pour:', file);
+        console.log('Génération thumb pour:', relativePath);
         await generateThumb(srcPath, thumbPath);
         scanned++;
       } catch (e) {
-        console.error('Erreur génération thumb pour', file, ':', e);
+        console.error('Erreur génération thumb pour', relativePath, ':', e);
       }
     }
-    if (isVideo(file) && !fs.existsSync(thumbPath)) {
+    if (isVideo(fileName) && !fs.existsSync(thumbPath)) {
       try {
-        console.log('Génération thumb vidéo pour:', file);
+        console.log('Génération thumb vidéo pour:', relativePath);
         await generateVideoThumb(srcPath, thumbPath);
         scanned++;
       } catch (e) {
-        console.error('Erreur génération thumb vidéo pour', file, ':', e);
+        console.error('Erreur génération thumb vidéo pour', relativePath, ':', e);
       }
     }
   }

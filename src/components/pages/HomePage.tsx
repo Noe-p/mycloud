@@ -3,6 +3,7 @@
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useScan } from '@/hooks/useScan';
 import { Media } from '@/types/Media';
+import { useTranslations } from 'next-intl';
 import React from 'react';
 import { Loader } from '../Loaders/Loader';
 import { MediaGrid } from '../Medias/MediaGrid';
@@ -16,6 +17,7 @@ export function HomePage(): React.JSX.Element {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
   const { fetchThumbs } = useScan();
+  const tCommons = useTranslations('common');
 
   // Chargement initial des thumbnails
   React.useEffect(() => {
@@ -79,7 +81,7 @@ export function HomePage(): React.JSX.Element {
         {/* Message de fin */}
         {!hasMore && allThumbs.length > 0 && (
           <div className="text-center py-8 text-muted-foreground">
-            Toutes les photos ont été chargées ({allThumbs.length} au total)
+            {tCommons('home.allImagesLoaded', { count: allThumbs.length })}
           </div>
         )}
       </div>

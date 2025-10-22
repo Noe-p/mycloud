@@ -4,7 +4,9 @@
     "privacyPolicy": "Politique de confidentialité",
     "close": "Fermer"
   },
-  "home": {},
+  "home": {
+    "allImagesLoaded": "Toutes les photos ont été chargées ({count} au total)"
+  },
   "navbar": {
     "title": "Photothèque",
     "nbElements": "{count} éléments",
