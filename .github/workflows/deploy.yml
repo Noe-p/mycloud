@@ -19,13 +19,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set lowercase owner
-        run: echo "OWNER_LC=${OWNER,,}" >> $GITHUB_ENV
+      - name: Compute meta (lowercase owner, short sha)
+        id: meta
+        run: |
+          echo "owner_lc=${OWNER,,}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHA::8}" >> "$GITHUB_OUTPUT"
         env:
           OWNER: ${{ github.repository_owner }}
-
-      - name: Set short SHA
-        run: echo "SHORT_SHA=${SHA::8}" >> $GITHUB_ENV
+          SHA: ${{ github.sha }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
@@ -34,18 +35,31 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.CR_PAT }}
 
-      - name: Build & push image with short SHA tag
-        run: |
-          docker build \
-            --build-arg NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }} \
-            -t $GHCR_REGISTRY/${OWNER_LC}/mycloud:${SHORT_SHA} .
-          docker push $GHCR_REGISTRY/${OWNER_LC}/mycloud:${SHORT_SHA}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push multi-arch image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: ${{ env.GHCR_REGISTRY }}/${{ steps.meta.outputs.owner_lc }}/mycloud:${{ steps.meta.outputs.short_sha }}
+          build-args: |
+            NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
 
       - name: Inject image tag into docker-compose.yml
+        env:
+          GHCR_REGISTRY: ${{ env.GHCR_REGISTRY }}
+          OWNER_LC: ${{ steps.meta.outputs.owner_lc }}
+          SHORT_SHA: ${{ steps.meta.outputs.short_sha }}
         run: |
-          sed -i "s|\${GHCR_REGISTRY}|${{ env.GHCR_REGISTRY }}|g" docker-compose.yml
-          sed -i "s|\${OWNER_LC}|${OWNER_LC}|g" docker-compose.yml
-          sed -i "s|\${SHA}|${SHORT_SHA}|g" docker-compose.yml
+          sed -i "s|\${GHCR_REGISTRY}|$GHCR_REGISTRY|g" docker-compose.yml
+          sed -i "s|\${OWNER_LC}|$OWNER_LC|g" docker-compose.yml
+          sed -i "s|\${SHA}|$SHORT_SHA|g" docker-compose.yml
 
       - name: Upload deploy compose file
         uses: actions/upload-artifact@v4
