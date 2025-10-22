@@ -16,7 +16,7 @@ services:
       - THUMB_DIR=/app/public/thumbs
     volumes:
       # Montage des répertoires de médias en lecture seule
-      - /Users/noephilippe/Pictures/PhotosToScan:/media/photos:ro
+      - /mnt/ssd/Photos:/media/photos:ro
       # Montage du répertoire des miniatures pour persister les données
       - thumbs-data:/app/public/thumbs
     networks:

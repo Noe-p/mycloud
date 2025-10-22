@@ -210,7 +210,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return {
           file: relativePath,
           fileId,
-          thumb: `/thumbs/${fileId}.thumb.jpg`,
+          thumb: `/api/serve-thumb/${fileId}`,
           type: isVideo ? 'video' : 'image',
           duration,
           thumbReady,
