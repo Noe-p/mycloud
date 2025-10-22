@@ -55,7 +55,7 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
         const res = await fetch('/api/media-dir');
         const data = await res.json();
         if (data.mediaDirs && Array.isArray(data.mediaDirs)) {
-          setMediaDirs(data.mediaDirs);
+          setMediaDirs(data.mediaDirs as string[]);
         }
       } catch (error) {
         console.error('Error loading current folders:', error);
@@ -85,7 +85,7 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setMediaDirs(data.mediaDirs);
+        setMediaDirs(data.mediaDirs as string[]);
         setNewFolder('');
       } else {
         alert(`Error: ${data.error || 'Failed to add folder'}`);
@@ -109,7 +109,7 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setMediaDirs(data.mediaDirs);
+        setMediaDirs(data.mediaDirs as string[]);
       } else {
         alert(`Error: ${data.error || 'Failed to remove folder'}`);
       }

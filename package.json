@@ -19,7 +19,6 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "exiftool-vendored": "^31.1.0",
-    "gsap": "^3.12.7",
     "lucide-react": "^0.525.0",
     "next": "^15.3.5",
     "next-intl": "^4.1.0",
@@ -32,7 +31,6 @@
     "vaul": "^1.1.2"
   },
   "devDependencies": {
-    "@types/gsap": "^3.0.0",
     "@types/node": "^24.0.12",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
