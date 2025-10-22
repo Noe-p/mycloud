@@ -14,9 +14,9 @@ export function Layout(props: LayoutProps): React.JSX.Element {
   const { children, className } = props;
 
   return (
-    <Col className="bg-background text-foreground">
+    <Col className={cn('bg-background text-foreground', className)}>
       <NavBar />
-      {className ? <Page>{children}</Page> : <Page>{children}</Page>}
+      <Page>{children}</Page>
       <Footer />
     </Col>
   );

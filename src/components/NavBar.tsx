@@ -17,7 +17,7 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
   return (
     <nav
       className={cn(
-        'fixed top-0 left-0 w-full z-50 bg-background/90 backdrop-blur-sm py-3',
+        'fixed top-0 left-0 w-full z-50 bg-background/40 backdrop-blur-sm py-3',
         className,
       )}
       role="navigation"
@@ -26,9 +26,7 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
       <Row className="max-w-7xl mx-auto px-4 md:px-8 lg:px-16 items-center">
         <Col>
           <H1 className="">{tCommons('navbar.title')}</H1>
-          <P16 className="text-muted-foreground">
-            {tCommons('navbar.nbElements', { count: 42 })}
-          </P16>
+          <P16 className="">{tCommons('navbar.nbElements', { count: 42 })}</P16>
         </Col>
       </Row>
     </nav>

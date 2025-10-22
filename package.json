@@ -1,9 +1,11 @@
 {
-  "name": "Mycloud",
+  "name": "mycloud",
   "version": "0.1.0",
   "private": true,
-  "description": "Icloud pour raspberry PI",  "scripts": {
-  "author": "Noé PHilippe <noephilippe29@gmail.com>",    "dev": "next dev",
+  "description": "Icloud pour raspberry PI",
+  "scripts": {
+    "author": "Noé PHilippe <noephilippe29@gmail.com>",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
