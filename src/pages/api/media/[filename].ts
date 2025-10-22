@@ -3,7 +3,14 @@ import fs from 'fs';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
 
-const mediaDir = process.env.MEDIA_DIR || '';
+// Support des dossiers multiples
+const getMediaDirs = (): string[] => {
+  const mediaDirs = process.env.MEDIA_DIRS || process.env.MEDIA_DIR || '';
+  return mediaDirs
+    .split(',')
+    .map((d) => d.trim())
+    .filter(Boolean);
+};
 
 // Fonction pour scanner récursivement tous les fichiers
 function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
@@ -27,9 +34,10 @@ function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
   return arrayOfFiles;
 }
 
-// Fonction pour créer un identifiant unique basé sur le chemin
-function getFileId(relativePath: string): string {
-  return crypto.createHash('sha256').update(relativePath).digest('hex').substring(0, 16);
+// Fonction pour créer un identifiant unique basé sur le chemin et le dossier source
+function getFileId(relativePath: string, sourceDir: string): string {
+  const uniquePath = `${sourceDir}/${relativePath}`;
+  return crypto.createHash('sha256').update(uniquePath).digest('hex').substring(0, 16);
 }
 
 // Cache pour éviter de rescanner à chaque requête
@@ -39,13 +47,22 @@ function buildFileIdCache(): Map<string, string> {
   if (fileIdCache) return fileIdCache;
 
   const cache = new Map<string, string>();
-  const allFiles = getAllFiles(mediaDir);
+  const mediaDirs = getMediaDirs();
 
-  allFiles.forEach((filePath) => {
-    const relativePath = path.relative(mediaDir, filePath);
-    const fileId = getFileId(relativePath);
-    cache.set(fileId, filePath);
-  });
+  for (const mediaDir of mediaDirs) {
+    if (!fs.existsSync(mediaDir)) {
+      console.warn(`Directory does not exist: ${mediaDir}`);
+      continue;
+    }
+
+    const allFiles = getAllFiles(mediaDir);
+
+    allFiles.forEach((filePath) => {
+      const relativePath = path.relative(mediaDir, filePath);
+      const fileId = getFileId(relativePath, mediaDir);
+      cache.set(fileId, filePath);
+    });
+  }
 
   fileIdCache = cache;
   return cache;
@@ -58,8 +75,10 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'Invalid filename' });
   }
 
-  if (!mediaDir) {
-    return res.status(500).json({ error: 'MEDIA_DIR not set' });
+  const mediaDirs = getMediaDirs();
+
+  if (mediaDirs.length === 0) {
+    return res.status(500).json({ error: 'MEDIA_DIRS not set' });
   }
 
   // Construire le cache des IDs
@@ -68,8 +87,14 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   // Chercher le fichier par son ID
   const filePath = cache.get(filename);
 
-  if (!filePath || !fs.existsSync(filePath) || !filePath.startsWith(mediaDir)) {
+  if (!filePath || !fs.existsSync(filePath)) {
     return res.status(404).json({ error: 'File not found' });
+  }
+
+  // Vérifier que le fichier appartient à un des dossiers autorisés
+  const isInAllowedDir = mediaDirs.some((dir) => filePath.startsWith(dir));
+  if (!isInAllowedDir) {
+    return res.status(403).json({ error: 'Access denied' });
   }
 
   // Déterminer le type MIME

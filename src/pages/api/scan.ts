@@ -5,14 +5,24 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
 import sharp from 'sharp';
 
-const mediaDir = process.env.MEDIA_DIR || '';
+// Support des dossiers multiples
+const getMediaDirs = (): string[] => {
+  const mediaDirs = process.env.MEDIA_DIRS || process.env.MEDIA_DIR || '';
+  return mediaDirs
+    .split(',')
+    .map((d) => d.trim())
+    .filter(Boolean);
+};
+
 const thumbDir = process.env.THUMB_DIR || '';
 const scanLockPath = path.join(process.cwd(), 'public', 'scan.lock');
 const scanStatePath = path.join(process.cwd(), 'public', 'scan-state.json');
 
-// Fonction pour créer un identifiant unique basé sur le chemin
-function getFileId(relativePath: string): string {
-  return crypto.createHash('sha256').update(relativePath).digest('hex').substring(0, 16);
+// Fonction pour créer un identifiant unique basé sur le chemin et le dossier source
+function getFileId(relativePath: string, sourceDir: string): string {
+  // Inclure le dossier source pour éviter les collisions entre différents dossiers
+  const uniquePath = `${sourceDir}/${relativePath}`;
+  return crypto.createHash('sha256').update(uniquePath).digest('hex').substring(0, 16);
 }
 
 // Fonction pour scanner récursivement tous les fichiers
@@ -158,8 +168,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  if (!mediaDir || !thumbDir) {
-    return res.status(500).json({ error: 'MEDIA_DIR or THUMB_DIR not set' });
+  const mediaDirs = getMediaDirs();
+
+  if (mediaDirs.length === 0 || !thumbDir) {
+    return res.status(500).json({ error: 'MEDIA_DIRS or THUMB_DIR not set' });
   }
 
   // Créer le fichier lock
@@ -172,20 +184,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const startedAt = new Date().toISOString();
 
   try {
-    // Scanner récursivement tous les fichiers
-    const allFiles = getAllFiles(mediaDir);
+    // Scanner récursivement tous les fichiers de tous les dossiers
+    const allMediaFiles: Array<{ filePath: string; sourceDir: string }> = [];
 
-    // Filtrer pour ne garder que les médias
-    const mediaFiles = allFiles.filter((filePath) => {
-      const fileName = path.basename(filePath);
-      return isImage(fileName) || isVideo(fileName);
-    });
+    for (const mediaDir of mediaDirs) {
+      if (!fs.existsSync(mediaDir)) {
+        console.warn(`Directory does not exist: ${mediaDir}`);
+        continue;
+      }
+
+      const allFiles = getAllFiles(mediaDir);
+      const mediaFilesInDir = allFiles
+        .filter((filePath) => {
+          const fileName = path.basename(filePath);
+          return isImage(fileName) || isVideo(fileName);
+        })
+        .map((filePath) => ({ filePath, sourceDir: mediaDir }));
+
+      allMediaFiles.push(...mediaFilesInDir);
+    }
 
     // Créer un Set des fileIds valides pour comparaison rapide
     const validFileIds = new Set<string>();
-    mediaFiles.forEach((filePath) => {
-      const relativePath = path.relative(mediaDir, filePath);
-      const fileId = getFileId(relativePath);
+    allMediaFiles.forEach(({ filePath, sourceDir }) => {
+      const relativePath = path.relative(sourceDir, filePath);
+      const fileId = getFileId(relativePath, sourceDir);
       validFileIds.add(fileId);
     });
 
@@ -212,8 +235,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    const imagesCount = mediaFiles.filter((f) => isImage(path.basename(f))).length;
-    const videosCount = mediaFiles.filter((f) => isVideo(path.basename(f))).length;
+    const imagesCount = allMediaFiles.filter(({ filePath }) =>
+      isImage(path.basename(filePath)),
+    ).length;
+    const videosCount = allMediaFiles.filter(({ filePath }) =>
+      isVideo(path.basename(filePath)),
+    ).length;
     const total = imagesCount + videosCount;
     let scanned = 0;
 
@@ -229,11 +256,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       startedAt,
     });
 
-    for (const srcPath of mediaFiles) {
+    for (const { filePath: srcPath, sourceDir } of allMediaFiles) {
       const fileName = path.basename(srcPath);
-      // Créer un nom unique pour le thumb basé sur le chemin relatif
-      const relativePath = path.relative(mediaDir, srcPath);
-      const fileId = getFileId(relativePath);
+      // Créer un nom unique pour le thumb basé sur le chemin relatif et le dossier source
+      const relativePath = path.relative(sourceDir, srcPath);
+      const fileId = getFileId(relativePath, sourceDir);
       const thumbPath = path.join(thumbDir, `${fileId}.thumb.jpg`);
 
       if (isImage(fileName) && !fs.existsSync(thumbPath)) {

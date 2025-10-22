@@ -198,7 +198,7 @@ export function ImagesFullScreen({
 
                 return (
                   <button
-                    key={idx}
+                    key={media.fileId}
                     className={cn(
                       'relative flex-shrink-0 rounded transition-all focus:outline-none focus:ring-2 focus:ring-white overflow-hidden',
                       currentIndex === idx ? 'w-16 h-16 ring-2 ring-white' : 'w-12 h-16',

@@ -14,7 +14,14 @@
     "menu": {
       "title": "Menu",
       "scan": "Scanner les nouveaux médias",
-      "scanning": "Scan en cours..."
+      "scanning": "Scan en cours...",
+      "selectFolder": "Sélectionner un dossier",
+      "addFolder": "Ajouter un dossier",
+      "currentFolders": "Dossiers à scanner :",
+      "noFolders": "Aucun dossier configuré",
+      "browseFolder": "Parcourir...",
+      "folderPlaceholder": "Chemin complet (ex: /Users/nom/Pictures)",
+      "folderHint": "💡 Complétez le chemin complet du dossier sélectionné"
     }
   },
   "footer": {

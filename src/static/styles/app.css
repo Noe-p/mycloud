@@ -4,23 +4,23 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%; /* Blanc pur */
-    --foreground: 0 0% 9%; /* Texte sombre */
+    --background: 0 0% 7%; /* Noir profond #121212 */
+    --foreground: 0 0% 95%; /* Texte clair */
 
-    --card: 0 0% 100%; /* Cartes blanches */
-    --card-foreground: 0 0% 9%;
+    --card: 0 0% 10%; /* Cartes gris très foncé #1A1A1A */
+    --card-foreground: 0 0% 95%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 95%;
 
     --primary: 213 94% 68%; /* Bleu moderne #3B82F6 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 96%; /* Gris très clair #F5F5F5 */
-    --secondary-foreground: 0 0% 9%;
+    --secondary: 0 0% 15%; /* Gris foncé #262626 */
+    --secondary-foreground: 0 0% 95%;
 
-    --muted: 0 0% 96%; /* Gris doux pour fond */
-    --muted-foreground: 0 0% 45%; /* Gris moyen pour texte */
+    --muted: 0 0% 15%; /* Gris foncé pour fond */
+    --muted-foreground: 0 0% 65%; /* Gris moyen pour texte */
 
     --accent: 213 94% 68%; /* Même bleu que primary pour cohérence */
     --accent-foreground: 0 0% 100%;
@@ -28,8 +28,8 @@
     --destructive: 0 84% 60%; /* Rouge standard */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 90%; /* Bordures grises claires */
-    --input: 0 0% 96%; /* Background input gris clair */
+    --border: 0 0% 20%; /* Bordures grises foncées #333333 */
+    --input: 0 0% 15%; /* Background input gris foncé */
     --ring: 213 94% 68%; /* Focus ring bleu */
 
     --radius: 0.5rem;

@@ -8,11 +8,20 @@ import { promisify } from 'util';
 
 const execPromise = promisify(exec);
 const thumbDir = process.env.THUMB_DIR || '';
-const mediaDir = process.env.MEDIA_DIR || '';
 
-// Fonction pour créer un identifiant unique basé sur le chemin
-function getFileId(relativePath: string): string {
-  return crypto.createHash('sha256').update(relativePath).digest('hex').substring(0, 16);
+// Support des dossiers multiples
+const getMediaDirs = (): string[] => {
+  const mediaDirs = process.env.MEDIA_DIRS || process.env.MEDIA_DIR || '';
+  return mediaDirs
+    .split(',')
+    .map((d) => d.trim())
+    .filter(Boolean);
+};
+
+// Fonction pour créer un identifiant unique basé sur le chemin et le dossier source
+function getFileId(relativePath: string, sourceDir: string): string {
+  const uniquePath = `${sourceDir}/${relativePath}`;
+  return crypto.createHash('sha256').update(uniquePath).digest('hex').substring(0, 16);
 }
 
 // Fonction pour scanner récursivement tous les fichiers
@@ -103,8 +112,10 @@ async function getMediaCreationDate(filePath: string): Promise<Date | null> {
 */
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (!thumbDir || !mediaDir) {
-    return res.status(500).json({ error: 'THUMB_DIR or MEDIA_DIR not set' });
+  const mediaDirs = getMediaDirs();
+
+  if (!thumbDir || mediaDirs.length === 0) {
+    return res.status(500).json({ error: 'THUMB_DIR or MEDIA_DIRS not set' });
   }
 
   const startTime = Date.now();
@@ -113,17 +124,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const limit = parseInt(req.query.limit as string) || 100;
   const offset = parseInt(req.query.offset as string) || 0;
 
-  // Scanner récursivement tous les fichiers
-  const allFiles = getAllFiles(mediaDir);
+  // Scanner récursivement tous les fichiers de tous les dossiers
+  const allMediaFiles: Array<{ filePath: string; sourceDir: string }> = [];
 
-  // Filtrer d'abord pour éviter les traitements inutiles
-  const mediaFiles = allFiles.filter((filePath) => {
-    const fileName = path.basename(filePath);
-    return /\.(jpg|jpeg|png|gif|heic|mp4|mov|avi|mkv|hevc)$/i.test(fileName);
-  });
+  for (const mediaDir of mediaDirs) {
+    if (!fs.existsSync(mediaDir)) {
+      console.warn(`Directory does not exist: ${mediaDir}`);
+      continue;
+    }
+
+    const allFiles = getAllFiles(mediaDir);
+
+    // Filtrer d'abord pour éviter les traitements inutiles
+    const mediaFilesInDir = allFiles
+      .filter((filePath) => {
+        const fileName = path.basename(filePath);
+        return /\.(jpg|jpeg|png|gif|heic|mp4|mov|avi|mkv|hevc)$/i.test(fileName);
+      })
+      .map((filePath) => ({ filePath, sourceDir: mediaDir }));
+
+    allMediaFiles.push(...mediaFilesInDir);
+  }
 
   console.log(
-    `[thumbs] ${mediaFiles.length} fichiers médias trouvés en ${Date.now() - startTime}ms`,
+    `[thumbs] ${allMediaFiles.length} fichiers médias trouvés en ${Date.now() - startTime}ms`,
   );
   console.log(`[thumbs] Chargement de ${limit} médias à partir de ${offset}`);
 
@@ -132,8 +156,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Cela permet un chargement initial ultra rapide
 
   // Paginer les fichiers
-  const paginatedFiles = mediaFiles.slice(offset, offset + limit);
-  const totalCount = mediaFiles.length;
+  const paginatedFiles = allMediaFiles.slice(offset, offset + limit);
+  const totalCount = allMediaFiles.length;
   const hasMore = offset + limit < totalCount;
 
   // Traiter les fichiers par lots pour éviter de surcharger le système
@@ -151,13 +175,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   for (let i = 0; i < paginatedFiles.length; i += BATCH_SIZE) {
     const batch = paginatedFiles.slice(i, i + BATCH_SIZE);
     const batchResults = await Promise.all(
-      batch.map(async (filePath) => {
+      batch.map(async ({ filePath, sourceDir }) => {
         const fileName = path.basename(filePath);
         const isVideo = /\.(mp4|mov|avi|mkv|hevc)$/i.test(fileName);
 
-        // Créer un identifiant unique basé sur le chemin relatif
-        const relativePath = path.relative(mediaDir, filePath);
-        const fileId = getFileId(relativePath);
+        // Créer un identifiant unique basé sur le chemin relatif et le dossier source
+        const relativePath = path.relative(sourceDir, filePath);
+        const fileId = getFileId(relativePath, sourceDir);
         const thumbPath = path.join(thumbDir, `${fileId}.thumb.jpg`);
         const thumbReady = fs.existsSync(thumbPath);
 

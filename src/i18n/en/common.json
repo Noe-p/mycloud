@@ -16,7 +16,14 @@
     "menu": {
       "title": "Menu",
       "scan": "Scan new media",
-      "scanning": "Scanning..."
+      "scanning": "Scanning...",
+      "selectFolder": "Select folder",
+      "addFolder": "Add folder",
+      "currentFolders": "Folders to scan:",
+      "noFolders": "No folders configured",
+      "browseFolder": "Browse...",
+      "folderPlaceholder": "Full path (e.g. /Users/name/Pictures)",
+      "folderHint": "💡 Complete the full path of the selected folder"
     }
   },
   "footer": {
