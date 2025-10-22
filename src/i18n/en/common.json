@@ -1,0 +1,43 @@
+{
+  "language": "en",
+  "generics": {
+    "email": "Email",
+    "github": "GitHub",
+    "linkedin": "LinkedIn",
+    "instagram": "Instagram",
+    "sendEmail": "Send me an email",
+    "privacyPolicy": "Privacy Policy"
+  },
+  "home": {
+    "name": "Example Image Gallery",
+    "description": "Click on an image to open it in fullscreen. Use the arrows or dots to navigate.",
+    "fullscreen": "View in Fullscreen"
+  },
+  "projects": {
+    "name": "Discover my projects"
+  },
+  "status": "Available for work",
+  "position": "Fullstack Developer",
+  "navbar": {
+    "home": "Home",
+    "services": "Discover our services",
+    "contact": "Contact us",
+    "testimonials": "Customer reviews"
+  },
+  "footer": {
+    "title": "Footer Title",
+    "subtitle": "Contact us for a free quote",
+    "copyright": "Copyright © 2025 - All rights reserved",
+    "designed": "Site réalisé par",
+    "contact": {
+      "title": "Contact",
+      "email": "test@gmail.com",
+      "phone": "00 00 00 00 00"
+    },
+    "zone": {
+      "title": "Intervention Area",
+      "location": "Pays Bigouden",
+      "availability": "Available 7 days a week"
+    }
+  }
+}

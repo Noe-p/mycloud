@@ -1,0 +1,11 @@
+{
+  "exemple-project": {
+    "title": "Exemple de Projet",
+    "description": "Ceci est un exemple de projet pour illustrer la structure du fichier JSON.",
+    "metas": {
+      "title": "Exemple de Projet — Noé Philippe",
+      "description": "Description de l'exemple de projet pour démonstration.",
+      "keywords": "exemple, projet, démonstration"
+    }
+  }
+}

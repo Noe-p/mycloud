@@ -1,0 +1,100 @@
+name: CI/CD Docker Compose
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    env:
+      GHCR_REGISTRY: ghcr.io
+      OWNER: ${{ github.repository_owner }}
+      SHA: ${{ github.sha }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set lowercase owner
+        run: echo "OWNER_LC=${OWNER,,}" >> $GITHUB_ENV
+        env:
+          OWNER: ${{ github.repository_owner }}
+
+      - name: Set short SHA
+        run: echo "SHORT_SHA=${SHA::8}" >> $GITHUB_ENV
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.GHCR_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Generate .env.production file
+        run: |
+          echo "NEXT_PUBLIC_APP_URL=${{ secrets.ENV_NEXT_PUBLIC_APP_URL }}" >> .env.production
+          echo "NEXT_PUBLIC_GA_ID=${{ secrets.ENV_NEXT_PUBLIC_GA_ID }}" >> .env.production
+
+      - name: Build & push image with short SHA tag
+        run: |
+          docker build -t $GHCR_REGISTRY/${OWNER_LC}/nextjs-template:${SHORT_SHA} .
+          docker push $GHCR_REGISTRY/${OWNER_LC}/nextjs-template:${SHORT_SHA}
+
+      - name: Inject image tag into docker-compose.yml
+        run: |
+          sed -i "s|\${GHCR_REGISTRY}|${{ env.GHCR_REGISTRY }}|g" docker-compose.yml
+          sed -i "s|\${OWNER_LC}|${OWNER_LC}|g" docker-compose.yml
+          sed -i "s|\${SHA}|${SHORT_SHA}|g" docker-compose.yml
+
+      - name: Upload deploy compose file
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-compose
+          path: docker-compose.yml
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download deploy compose file
+        uses: actions/download-artifact@v4
+        with:
+          name: deploy-compose
+
+      - name: Ensure remote directory exists
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            mkdir -p ~/nextjs-template
+
+      - name: Copy Compose file to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: 'docker-compose.yml'
+          target: '~/nextjs-template/'
+          strip_components: 0
+
+      - name: Deploy via SSH (avec login GHCR)
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd ~/nextjs-template
+            echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            docker compose pull
+            docker compose up -d --remove-orphans

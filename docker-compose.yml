@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  app:
+    image: ${GHCR_REGISTRY}/${OWNER_LC}/nextjs-template:${SHA}
+    restart: always
+    ports:
+      - '3003:3000'
+    environment:
+      - NODE_ENV=production

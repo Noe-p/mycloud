@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%; /* Blanc pur */
+    --foreground: 0 0% 9%; /* Texte sombre */
+
+    --card: 0 0% 100%; /* Cartes blanches */
+    --card-foreground: 0 0% 9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+
+    --primary: 213 94% 68%; /* Bleu moderne #3B82F6 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%; /* Gris très clair #F5F5F5 */
+    --secondary-foreground: 0 0% 9%;
+
+    --muted: 0 0% 96%; /* Gris doux pour fond */
+    --muted-foreground: 0 0% 45%; /* Gris moyen pour texte */
+
+    --accent: 213 94% 68%; /* Même bleu que primary pour cohérence */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%; /* Rouge standard */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 90%; /* Bordures grises claires */
+    --input: 0 0% 96%; /* Background input gris clair */
+    --ring: 213 94% 68%; /* Focus ring bleu */
+
+    --radius: 0.5rem;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  /* overscroll-behavior: none; */
+  padding: 0;
+  margin: 0;
+  scroll-behavior: smooth;
+  width: 100vw;
+  overflow-x: hidden;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer et Edge */
+}
+
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.shadow-primary {
+  text-shadow: 3px 3px 0 hsl(var(--primary));
+
+  @media (max-width: 640px) {
+    text-shadow: 2px 2px 0 hsl(var(--primary));
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "generics": {
+    "email": "Email",
+    "github": "GitHub",
+    "linkedin": "LinkedIn",
+    "instagram": "Instagram",
+    "sendEmail": "Envois-moi un email",
+    "privacyPolicy": "Politique de confidentialité"
+  },
+  "home": {
+    "name": "Exemple de galerie d'images",
+    "description": "Cliquez sur une image pour l'ouvrir en plein écran. Utilisez les flèches ou les points pour naviguer.",
+    "fullscreen": "Voir en plein écran"
+  },
+  "projects": {
+    "name": "Découvrir mes projets"
+  },
+  "status": "Prêt à travailler",
+  "position": "Développeur Fullstack",
+  "navbar": {
+    "home": "Accueil",
+    "services": "Découvrir nos services",
+    "contact": "Nous contacter",
+    "testimonials": "Avis clients"
+  },
+  "footer": {
+    "title": "Titre du footer",
+    "subtitle": "Contactez-nous pour un devis gratuit",
+    "copyright": "Copyright © 2025 - Tous droits réservés",
+    "designed": "Site réalisé par",
+    "contact": {
+      "title": "Contact",
+      "email": "test@gmail.com",
+      "phone": "00 00 00 00 00"
+    },
+    "zone": {
+      "title": "Zone d'intervention",
+      "location": "Pays Bigouden",
+      "availability": "Disponible 7j/7"
+    }
+  }
+}
