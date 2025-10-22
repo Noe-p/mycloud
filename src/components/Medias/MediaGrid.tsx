@@ -42,6 +42,7 @@ export function MediaGrid({ medias }: MediaGridProps): React.JSX.Element {
                 className="object-cover"
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
                 priority={index < 6}
+                loading={index < 6 ? undefined : 'lazy'}
               />
             ) : (
               <div className="absolute inset-0 bg-muted animate-pulse" aria-hidden="true" />

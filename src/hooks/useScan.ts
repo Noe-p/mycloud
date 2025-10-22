@@ -101,6 +101,10 @@ export function useScan() {
       pollingRef.current = null;
     }
     setLoading(false);
+
+    // Émettre un événement pour notifier les autres composants
+    window.dispatchEvent(new CustomEvent('mediasRefreshed', { detail: { thumbs } }));
+
     return thumbs;
   };
 
