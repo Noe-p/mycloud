@@ -3,4 +3,5 @@ export type ScanResponse = {
   total?: number;
   imagesCount?: number;
   videosCount?: number;
+  deletedThumbs?: number;
 };

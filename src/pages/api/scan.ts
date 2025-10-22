@@ -109,6 +109,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return isImage(fileName) || isVideo(fileName);
   });
 
+  // Créer un Set des fileIds valides pour comparaison rapide
+  const validFileIds = new Set<string>();
+  mediaFiles.forEach((filePath) => {
+    const relativePath = path.relative(mediaDir, filePath);
+    const fileId = getFileId(relativePath);
+    validFileIds.add(fileId);
+  });
+
+  // Supprimer les thumbs orphelins (dont le média source n'existe plus)
+  let deletedThumbs = 0;
+  if (fs.existsSync(thumbDir)) {
+    const thumbFiles = fs.readdirSync(thumbDir);
+    for (const thumbFile of thumbFiles) {
+      if (thumbFile.endsWith('.thumb.jpg')) {
+        // Extraire le fileId du nom du thumb
+        const fileId = thumbFile.replace('.thumb.jpg', '');
+        // Si le fileId n'existe pas dans les médias valides, supprimer le thumb
+        if (!validFileIds.has(fileId)) {
+          const thumbPath = path.join(thumbDir, thumbFile);
+          try {
+            fs.unlinkSync(thumbPath);
+            deletedThumbs++;
+            console.log('Thumb orphelin supprimé:', thumbFile);
+          } catch (e) {
+            console.error('Erreur suppression thumb orphelin', thumbFile, ':', e);
+          }
+        }
+      }
+    }
+  }
+
   const imagesCount = mediaFiles.filter((f) => isImage(path.basename(f))).length;
   const videosCount = mediaFiles.filter((f) => isVideo(path.basename(f))).length;
   const total = imagesCount + videosCount;
@@ -140,5 +171,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
   }
-  res.status(200).json({ scanned, total, imagesCount, videosCount });
+
+  console.log(
+    `Scan terminé: ${scanned} thumbs générés, ${deletedThumbs} thumbs orphelins supprimés`,
+  );
+  res.status(200).json({ scanned, total, imagesCount, videosCount, deletedThumbs });
 }

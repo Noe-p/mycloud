@@ -16,25 +16,32 @@ export function HomePage(): React.JSX.Element {
   const [displayedThumbs, setDisplayedThumbs] = React.useState<Media[]>([]);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
+  const [totalMediaCount, setTotalMediaCount] = React.useState(0);
+  const [hasMoreOnServer, setHasMoreOnServer] = React.useState(true);
   const { fetchThumbs } = useScan();
   const tCommons = useTranslations('common');
 
-  // Chargement initial des thumbnails
+  // Chargement initial des thumbnails (100 premiers)
   React.useEffect(() => {
-    void fetchThumbs().then((thumbs) => {
+    void fetchThumbs(false, 100, 0).then((thumbs) => {
       setAllThumbs(thumbs);
       setDisplayedThumbs(thumbs.slice(0, ITEMS_PER_PAGE));
       setCurrentPage(1);
+      // Le total sera mis à jour via l'événement ou on peut le récupérer directement
     });
   }, []);
 
   // Écouter les événements de rafraîchissement (après un scan)
   React.useEffect(() => {
-    const handleMediasRefresh = (event: CustomEvent<{ thumbs: Media[] }>) => {
-      const thumbs = event.detail.thumbs;
+    const handleMediasRefresh = (
+      event: CustomEvent<{ thumbs: Media[]; total?: number; hasMore?: boolean }>,
+    ) => {
+      const { thumbs, total, hasMore } = event.detail;
       setAllThumbs(thumbs);
       setDisplayedThumbs(thumbs.slice(0, ITEMS_PER_PAGE));
       setCurrentPage(1);
+      if (total !== undefined) setTotalMediaCount(total);
+      if (hasMore !== undefined) setHasMoreOnServer(hasMore);
     };
 
     window.addEventListener('mediasRefreshed', handleMediasRefresh as EventListener);
@@ -44,10 +51,27 @@ export function HomePage(): React.JSX.Element {
     };
   }, []);
 
-  const hasMore = displayedThumbs.length < allThumbs.length;
+  const hasMore = displayedThumbs.length < allThumbs.length || hasMoreOnServer;
 
   const loadMore = React.useCallback(() => {
-    if (isLoadingMore || !hasMore) return;
+    if (isLoadingMore) return;
+
+    // Si on a affiché tout ce qu'on a chargé du serveur ET qu'il y a plus de données côté serveur
+    if (displayedThumbs.length >= allThumbs.length && hasMoreOnServer && allThumbs.length > 0) {
+      setIsLoadingMore(true);
+      // Charger plus de données depuis le serveur
+      void fetchThumbs(false, 100, allThumbs.length).then((newThumbs) => {
+        const combined = [...allThumbs, ...newThumbs];
+        setAllThumbs(combined);
+        setDisplayedThumbs(combined.slice(0, displayedThumbs.length + ITEMS_PER_PAGE));
+        setHasMoreOnServer(newThumbs.length === 100); // S'il y a moins de 100, on a tout chargé
+        setIsLoadingMore(false);
+      });
+      return;
+    }
+
+    // Sinon, afficher plus d'éléments déjà chargés
+    if (displayedThumbs.length >= allThumbs.length) return;
 
     setIsLoadingMore(true);
 
@@ -60,7 +84,7 @@ export function HomePage(): React.JSX.Element {
       setCurrentPage(nextPage);
       setIsLoadingMore(false);
     }, 300);
-  }, [currentPage, allThumbs, hasMore, isLoadingMore]);
+  }, [currentPage, allThumbs, displayedThumbs.length, hasMoreOnServer, isLoadingMore, fetchThumbs]);
 
   const { observerTarget } = useInfiniteScroll({
     hasMore,
@@ -79,9 +103,9 @@ export function HomePage(): React.JSX.Element {
         </div>
 
         {/* Message de fin */}
-        {!hasMore && allThumbs.length > 0 && (
+        {!hasMore && !hasMoreOnServer && allThumbs.length > 0 && (
           <div className="text-center py-8 text-muted-foreground">
-            {tCommons('home.allImagesLoaded', { count: allThumbs.length })}
+            {tCommons('home.allImagesLoaded', { count: totalMediaCount || allThumbs.length })}
           </div>
         )}
       </div>
