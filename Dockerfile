@@ -1,33 +1,63 @@
-# 1 – Installer les dépendances avec Bun
-FROM oven/bun:1 AS dependencies
-WORKDIR /home/app
-# copier lockfile Bun + package.json pour un install reproductible
-COPY package.json bun.lockb ./
-RUN bun install --frozen-lockfile
+# 1 - Installer les dépendances
+FROM node:18-alpine AS dependencies
+WORKDIR /app
 
-# 2 – Builder votre app Next.js
+# Installer les dépendances nécessaires pour sharp et autres packages natifs
+RUN apk add --no-cache libc6-compat python3 make g++
+
+# Copier les fichiers de dépendances
+COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* bun.lockb* ./
+
+# Installer les dépendances
+RUN if [ -f yarn.lock ]; then yarn install --frozen-lockfile; \
+  elif [ -f package-lock.json ]; then npm ci; \
+  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm install --frozen-lockfile; \
+  elif [ -f bun.lockb ]; then npm install; \
+  else echo "Lockfile not found." && exit 1; \
+  fi
+
+# 2 - Builder l'application Next.js
 FROM node:18-alpine AS builder
-WORKDIR /home/app
-# réutiliser les node_modules installés
-COPY --from=dependencies /home/app/node_modules ./node_modules
+WORKDIR /app
+
+# Copier les node_modules depuis l'étape dependencies
+COPY --from=dependencies /app/node_modules ./node_modules
+
+# Copier tous les fichiers source
 COPY . .
 
-COPY .env.production .env
-
-# build Next.js standalone
+# Variables d'environnement pour le build
 ENV NEXT_TELEMETRY_DISABLED=1
-ARG NODE_ENV=production
-ENV NODE_ENV=$NODE_ENV
+ENV NODE_ENV=production
+
+# Build Next.js en mode standalone
 RUN npm run build
 
-# 3 – Image de runtime légère
+# 3 - Image de runtime légère
 FROM node:18-alpine AS runner
-WORKDIR /home/app
+WORKDIR /app
+
+ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-# copier uniquement l’artefact standalone et les fichiers publics
-COPY --from=builder /home/app/.next/standalone ./standalone
-COPY --from=builder /home/app/public ./standalone/public
-COPY --from=builder /home/app/.next/static ./standalone/.next/static
+
+# Créer un utilisateur non-root
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+
+# Créer les répertoires nécessaires
+RUN mkdir -p /app/public/thumbs && chown -R nextjs:nodejs /app
+
+# Copier les fichiers nécessaires depuis le builder
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Passer à l'utilisateur non-root
+USER nextjs
+
+# Exposer le port
 EXPOSE 3000
+
 ENV PORT=3000
-CMD ["node", "./standalone/server.js"]
+
+# Démarrer l'application
+CMD ["node", "server.js"]

@@ -34,15 +34,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.CR_PAT }}
 
-      - name: Generate .env.production file
-        run: |
-          echo "NEXT_PUBLIC_APP_URL=${{ secrets.ENV_NEXT_PUBLIC_APP_URL }}" >> .env.production
-          echo "NEXT_PUBLIC_GA_ID=${{ secrets.ENV_NEXT_PUBLIC_GA_ID }}" >> .env.production
-
       - name: Build & push image with short SHA tag
         run: |
-          docker build -t $GHCR_REGISTRY/${OWNER_LC}/nextjs-template:${SHORT_SHA} .
-          docker push $GHCR_REGISTRY/${OWNER_LC}/nextjs-template:${SHORT_SHA}
+          docker build -t $GHCR_REGISTRY/${OWNER_LC}/mycloud:${SHORT_SHA} .
+          docker push $GHCR_REGISTRY/${OWNER_LC}/mycloud:${SHORT_SHA}
 
       - name: Inject image tag into docker-compose.yml
         run: |
@@ -73,7 +68,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            mkdir -p ~/nextjs-template
+            mkdir -p ~/mycloud
 
       - name: Copy Compose file to server
         uses: appleboy/scp-action@v0.1.7
@@ -83,7 +78,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           source: 'docker-compose.yml'
-          target: '~/nextjs-template/'
+          target: '~/mycloud/'
           strip_components: 0
 
       - name: Deploy via SSH (avec login GHCR)
@@ -94,7 +89,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            cd ~/nextjs-template
+            cd ~/mycloud
             echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
             docker compose pull
             docker compose up -d --remove-orphans
