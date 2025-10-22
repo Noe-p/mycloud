@@ -20,6 +20,9 @@ RUN if [ -f yarn.lock ]; then yarn install --frozen-lockfile; \
 FROM node:18-alpine AS builder
 WORKDIR /app
 
+# Arguments de build pour les variables publiques Next.js
+ARG NEXT_PUBLIC_APP_URL
+
 # Copier les node_modules depuis l'étape dependencies
 COPY --from=dependencies /app/node_modules ./node_modules
 
@@ -29,6 +32,7 @@ COPY . .
 # Variables d'environnement pour le build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 
 # Build Next.js en mode standalone
 RUN npm run build

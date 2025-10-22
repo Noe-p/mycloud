@@ -12,7 +12,6 @@ services:
       - NEXT_TELEMETRY_DISABLED=1
       - PORT=3000
       - NEXT_PUBLIC_APP_URL=https://noephilippe.ddns.net:3000
-      - NEXT_PUBLIC_APP_PORT=3000
       - MEDIA_DIRS=/media/photos
       - THUMB_DIR=/app/public/thumbs
     volumes:

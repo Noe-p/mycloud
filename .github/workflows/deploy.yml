@@ -36,7 +36,9 @@ jobs:
 
       - name: Build & push image with short SHA tag
         run: |
-          docker build -t $GHCR_REGISTRY/${OWNER_LC}/mycloud:${SHORT_SHA} .
+          docker build \
+            --build-arg NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }} \
+            -t $GHCR_REGISTRY/${OWNER_LC}/mycloud:${SHORT_SHA} .
           docker push $GHCR_REGISTRY/${OWNER_LC}/mycloud:${SHORT_SHA}
 
       - name: Inject image tag into docker-compose.yml
