@@ -200,7 +200,7 @@ export function ImagesFullScreen({
                   <button
                     key={idx}
                     className={cn(
-                      'flex-shrink-0 rounded transition-all focus:outline-none focus:ring-2 focus:ring-white overflow-hidden',
+                      'relative flex-shrink-0 rounded transition-all focus:outline-none focus:ring-2 focus:ring-white overflow-hidden',
                       currentIndex === idx ? 'w-16 h-16 ring-2 ring-white' : 'w-12 h-16',
                       opacityClass,
                     )}
@@ -210,12 +210,14 @@ export function ImagesFullScreen({
                     }`}
                     aria-current={currentIndex === idx}
                   >
-                    <img
+                    <Image
                       src={media.thumb}
                       alt={`Miniature ${idx + 1}`}
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
+                      sizes="64px"
                       loading="lazy"
-                      decoding="async"
+                      priority={false}
                     />
                   </button>
                 );
