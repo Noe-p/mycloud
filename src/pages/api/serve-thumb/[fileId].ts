@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Définir les headers appropriés
     res.setHeader('Content-Type', 'image/jpeg');
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    
+
     // Envoyer le fichier
     res.status(200).send(fileBuffer);
   } catch (error) {
