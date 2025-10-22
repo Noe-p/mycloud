@@ -71,6 +71,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'MEDIA_DIR or THUMB_DIR not set' });
   }
   const files = fs.readdirSync(mediaDir);
+  const imagesCount = files.filter((f) => isImage(f)).length;
+  const videosCount = files.filter((f) => isVideo(f)).length;
+  const total = imagesCount + videosCount;
   let scanned = 0;
   for (const file of files) {
     const srcPath = path.join(mediaDir, file);
@@ -94,5 +97,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
   }
-  res.status(200).json({ scanned });
+  res.status(200).json({ scanned, total, imagesCount, videosCount });
 }

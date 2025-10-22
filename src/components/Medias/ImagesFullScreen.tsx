@@ -210,15 +210,19 @@ export function ImagesFullScreen({
                     }`}
                     aria-current={currentIndex === idx}
                   >
-                    <Image
-                      src={media.thumb}
-                      alt={`Miniature ${idx + 1}`}
-                      fill
-                      className="object-cover"
-                      sizes="64px"
-                      loading="lazy"
-                      priority={false}
-                    />
+                    {media.thumbReady ? (
+                      <Image
+                        src={media.thumb}
+                        alt={`Miniature ${idx + 1}`}
+                        fill
+                        className="object-cover"
+                        sizes="64px"
+                        loading="lazy"
+                        priority={false}
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-muted" aria-hidden="true" />
+                    )}
                   </button>
                 );
               })}

@@ -1,14 +1,20 @@
 {
   "language": "en",
   "generics": {
-    "privacyPolicy": "Privacy Policy"
+    "privacyPolicy": "Privacy Policy",
+    "close": "Close"
   },
   "home": {},
   "status": "Available for work",
   "position": "Fullstack Developer",
   "navbar": {
     "title": "Photothèque",
-    "nbElements": "{count} items"
+    "nbElements": "{count} items",
+    "menu": {
+      "title": "Menu",
+      "scan": "Scan new media",
+      "scanning": "Scanning..."
+    }
   },
   "footer": {
     "copyright": "Copyright © 2025 - All rights reserved",

@@ -1,12 +1,18 @@
 {
   "language": "fr",
   "generics": {
-    "privacyPolicy": "Politique de confidentialité"
+    "privacyPolicy": "Politique de confidentialité",
+    "close": "Fermer"
   },
   "home": {},
   "navbar": {
     "title": "Photothèque",
-    "nbElements": "{count} éléments"
+    "nbElements": "{count} éléments",
+    "menu": {
+      "title": "Menu",
+      "scan": "Scanner les nouveaux médias",
+      "scanning": "Scan en cours..."
+    }
   },
   "footer": {
     "copyright": "Copyright © 2025 - Tous droits réservés",

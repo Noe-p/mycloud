@@ -33,12 +33,20 @@ export default async function handler(_req: NextApiRequest, res: NextApiResponse
     .filter((file) => /\.(jpg|jpeg|png|gif|heic|mp4|mov|avi|mkv|hevc)$/i.test(file))
     .map(async (file) => {
       const isVideo = /\.(mp4|mov|avi|mkv|hevc)$/i.test(file);
-      const duration = isVideo ? await getVideoDuration(path.join(mediaDir, file)) : null;
+      const mediaPath = path.join(mediaDir, file);
+      const duration = isVideo ? await getVideoDuration(mediaPath) : null;
+      const thumbPath = path.join(thumbDir, file + '.thumb.jpg');
+      const thumbReady = fs.existsSync(thumbPath);
+      const stats = fs.statSync(mediaPath);
+      const createdDate =
+        stats.birthtime && stats.birthtime.getTime() ? stats.birthtime : stats.mtime;
       return {
         file,
         thumb: `/thumbs/${file}.thumb.jpg`,
         type: isVideo ? 'video' : 'image',
         duration,
+        thumbReady,
+        createdAt: createdDate.toISOString(),
       };
     });
   const thumbs = await Promise.all(thumbsPromises);
