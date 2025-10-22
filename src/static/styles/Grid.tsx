@@ -48,7 +48,7 @@ export function Grid10({
   ...props
 }: { children: React.ReactNode; className?: string } & React.HTMLProps<HTMLDivElement>) {
   return (
-    <div className={cn('grid md:grid-cols-10 grid-cols-5 gap-1 w-full', className)} {...props}>
+    <div className={cn('grid md:grid-cols-10 grid-cols-5 gap-[3px] w-full', className)} {...props}>
       {children}
     </div>
   );

@@ -4,12 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useUmami } from '@/hooks/useUmami';
 import { cn } from '@/services/utils';
+import { Media } from '@/types/Media';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 interface ImagesFullScreenProps {
   images: string[];
+  medias?: Media[];
   isOpen: boolean;
   onClose: () => void;
   initialIndex?: number;
@@ -18,6 +20,7 @@ interface ImagesFullScreenProps {
 
 export function ImagesFullScreen({
   images,
+  medias,
   isOpen,
   onClose,
   initialIndex = 0,
@@ -26,6 +29,26 @@ export function ImagesFullScreen({
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isLoading, setIsLoading] = useState(true);
   const { trackCustomEvent } = useUmami();
+
+  const currentMedia = medias?.[currentIndex];
+  const isVideo = currentMedia?.type === 'video';
+
+  // Indices visibles: courant +/- 3 (avec wrap-around)
+  const visibleIndices = useMemo(() => {
+    if (!medias || medias.length === 0) return [] as number[];
+    const len = medias.length;
+    const res: number[] = [];
+    for (let d = -3; d <= 3; d++) {
+      const idx = (currentIndex + d + len) % len;
+      res.push(idx);
+    }
+    return res;
+  }, [currentIndex, medias]);
+
+  const circularDistance = (a: number, b: number, len: number) => {
+    const diff = Math.abs(a - b);
+    return Math.min(diff, len - diff);
+  };
 
   // Réinitialiser l'index quand la galerie s'ouvre
   useEffect(() => {
@@ -36,7 +59,7 @@ export function ImagesFullScreen({
     }
   }, [isOpen, initialIndex, projectName, trackCustomEvent]);
 
-  // Précharger les images adjacentes
+  // Précharger les images adjacentes (images uniquement)
   useEffect(() => {
     const preloadImages = () => {
       const nextIndex = (currentIndex + 1) % images.length;
@@ -47,12 +70,15 @@ export function ImagesFullScreen({
         img.src = src;
       };
 
-      preloadImage(images[nextIndex]);
-      preloadImage(images[prevIndex]);
+      // Si on a les types, ne précharge que si ce sont des images
+      const nextIsImage = medias ? medias[nextIndex]?.type === 'image' : true;
+      const prevIsImage = medias ? medias[prevIndex]?.type === 'image' : true;
+      if (nextIsImage) preloadImage(images[nextIndex]);
+      if (prevIsImage) preloadImage(images[prevIndex]);
     };
 
     preloadImages();
-  }, [currentIndex, images]);
+  }, [currentIndex, images, medias]);
 
   const handlePrevious = () => {
     setIsLoading(true);
@@ -84,7 +110,7 @@ export function ImagesFullScreen({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/30 border-none outline-none backdrop-blur-md">
+      <DialogContent className="max-w-[100vw] max-h-[100vh] p-0 bg-black/30 border-none outline-none backdrop-blur-md">
         <DialogTitle className="sr-only">
           {`Galerie diapos;images - Image ${currentIndex + 1} sur ${images.length}`}
         </DialogTitle>
@@ -97,23 +123,33 @@ export function ImagesFullScreen({
           onKeyDown={handleKeyDown}
           tabIndex={0}
         >
-          {/* Image principale */}
+          {/* Image ou vidéo principale */}
           <div className="relative w-full h-[80vh] flex items-center justify-center">
-            {isLoading && (
+            {isLoading && !isVideo && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                 <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
               </div>
             )}
-            <Image
-              src={images[currentIndex]}
-              alt={`Image ${currentIndex + 1} sur ${images.length}`}
-              fill
-              className="object-contain"
-              priority
-              quality={90}
-              onLoadingComplete={() => setIsLoading(false)}
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
-            />
+            {isVideo ? (
+              <video
+                src={images[currentIndex]}
+                controls
+                autoPlay
+                className="max-w-full max-h-full object-contain"
+                onLoadedData={() => setIsLoading(false)}
+              />
+            ) : (
+              <Image
+                src={images[currentIndex]}
+                alt={`Image ${currentIndex + 1} sur ${images.length}`}
+                fill
+                className="object-contain"
+                priority
+                quality={90}
+                onLoadingComplete={() => setIsLoading(false)}
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
+              />
+            )}
           </div>
 
           {/* Boutons de navigation */}
@@ -147,20 +183,43 @@ export function ImagesFullScreen({
             <X className="h-8 w-8" />
           </Button>
 
-          {/* Indicateurs de position */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-black/30 px-4 py-2 rounded-full backdrop-blur-sm">
-            {images.map((_, index) => (
-              <button
-                key={index}
-                className={cn(
-                  'w-2 h-2 rounded-full transition-all focus:outline-none focus:ring-0',
-                  currentIndex === index ? 'bg-white scale-125' : 'bg-white/50 hover:bg-primary/75',
-                )}
-                onClick={() => handleImageClick(index)}
-                aria-label={`Aller à l'image ${index + 1}`}
-                aria-current={currentIndex === index}
-              />
-            ))}
+          {/* Indicateurs de position avec miniatures (fenêtrage) */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-black/30 px-4 py-2 rounded-lg backdrop-blur-sm items-center">
+            {medias &&
+              medias.length > 0 &&
+              visibleIndices.map((idx) => {
+                const media = medias[idx];
+                const dist = circularDistance(idx, currentIndex, medias.length);
+                let opacityClass = 'opacity-60';
+                if (dist === 0) opacityClass = 'opacity-100';
+                else if (dist === 1) opacityClass = 'opacity-80';
+                else if (dist === 2) opacityClass = 'opacity-50';
+                else if (dist === 3) opacityClass = 'opacity-20';
+
+                return (
+                  <button
+                    key={idx}
+                    className={cn(
+                      'flex-shrink-0 rounded transition-all focus:outline-none focus:ring-2 focus:ring-white overflow-hidden',
+                      currentIndex === idx ? 'w-16 h-16 ring-2 ring-white' : 'w-12 h-16',
+                      opacityClass,
+                    )}
+                    onClick={() => handleImageClick(idx)}
+                    aria-label={`Aller à ${media.type === 'video' ? 'la vidéo' : "l'image"} ${
+                      idx + 1
+                    }`}
+                    aria-current={currentIndex === idx}
+                  >
+                    <img
+                      src={media.thumb}
+                      alt={`Miniature ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </button>
+                );
+              })}
           </div>
         </div>
       </DialogContent>
