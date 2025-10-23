@@ -12,3 +12,10 @@ yarn-debug.log*
 yarn-error.log*
 .DS_Store
 *.log
+
+# Cache exif
+public/exif-cache.json
+/public/thumbs
+/public/scan.lock
+/public/scan-state.json
+/public/exif-cache.json

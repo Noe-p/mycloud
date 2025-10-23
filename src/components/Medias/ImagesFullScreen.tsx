@@ -124,7 +124,7 @@ export function ImagesFullScreen({
           tabIndex={0}
         >
           {/* Image ou vidéo principale */}
-          <div className="relative w-full h-[80vh] flex items-center justify-center">
+          <div className="relative w-full h-[100vh] flex items-center justify-center">
             {isLoading && !isVideo && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                 <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
@@ -144,9 +144,9 @@ export function ImagesFullScreen({
                 alt={`Image ${currentIndex + 1} sur ${images.length}`}
                 fill
                 className="object-contain"
-                priority
+                priority={true}
                 quality={90}
-                onLoadingComplete={() => setIsLoading(false)}
+                onLoad={() => setIsLoading(false)}
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
               />
             )}
@@ -187,44 +187,57 @@ export function ImagesFullScreen({
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-black/30 px-4 py-2 rounded-lg backdrop-blur-sm items-center">
             {medias &&
               medias.length > 0 &&
-              visibleIndices.map((idx) => {
-                const media = medias[idx];
-                const dist = circularDistance(idx, currentIndex, medias.length);
-                let opacityClass = 'opacity-60';
-                if (dist === 0) opacityClass = 'opacity-100';
-                else if (dist === 1) opacityClass = 'opacity-80';
-                else if (dist === 2) opacityClass = 'opacity-50';
-                else if (dist === 3) opacityClass = 'opacity-20';
+              visibleIndices.map(() => {
+                // Filtrer les doublons de fileId dans visibleIndices
+                // On garde le premier passage de chaque fileId
+                const seen = new Set();
+                const filteredVisibleIndices = visibleIndices.filter((i) => {
+                  const fid = medias[i]?.fileId;
+                  if (seen.has(fid)) return false;
+                  seen.add(fid);
+                  return true;
+                });
 
-                return (
-                  <button
-                    key={media.fileId}
-                    className={cn(
-                      'relative flex-shrink-0 rounded transition-all focus:outline-none focus:ring-2 focus:ring-white overflow-hidden',
-                      currentIndex === idx ? 'w-16 h-16 ring-2 ring-white' : 'w-12 h-16',
-                      opacityClass,
-                    )}
-                    onClick={() => handleImageClick(idx)}
-                    aria-label={`Aller à ${media.type === 'video' ? 'la vidéo' : "l'image"} ${
-                      idx + 1
-                    }`}
-                    aria-current={currentIndex === idx}
-                  >
-                    {media.thumbReady ? (
-                      <Image
-                        src={media.thumb}
-                        alt={`Miniature ${idx + 1}`}
-                        fill
-                        className="object-cover"
-                        sizes="64px"
-                        loading="lazy"
-                        priority={false}
-                      />
-                    ) : (
-                      <div className="absolute inset-0 bg-muted" aria-hidden="true" />
-                    )}
-                  </button>
-                );
+                // On mappe sur filteredVisibleIndices au lieu de visibleIndices
+                return filteredVisibleIndices.map((idxVisible, i) => {
+                  const media = medias[idxVisible];
+                  const dist = circularDistance(idxVisible, currentIndex, medias.length);
+                  let opacityClass = 'opacity-60';
+                  if (dist === 0) opacityClass = 'opacity-100';
+                  else if (dist === 1) opacityClass = 'opacity-80';
+                  else if (dist === 2) opacityClass = 'opacity-50';
+                  else if (dist === 3) opacityClass = 'opacity-20';
+
+                  return (
+                    <button
+                      key={`thumb-${media.fileId}-${i}`}
+                      className={cn(
+                        'relative flex-shrink-0 rounded transition-all focus:outline-none focus:ring-2 focus:ring-white overflow-hidden',
+                        currentIndex === idxVisible ? 'w-16 h-16 ring-2 ring-white' : 'w-12 h-16',
+                        opacityClass,
+                      )}
+                      onClick={() => handleImageClick(idxVisible)}
+                      aria-label={`Aller à ${media.type === 'video' ? 'la vidéo' : "l'image"} ${
+                        idxVisible + 1
+                      }`}
+                      aria-current={currentIndex === idxVisible}
+                    >
+                      {media.thumbReady ? (
+                        <Image
+                          src={media.thumb}
+                          alt={`Miniature ${idxVisible + 1}`}
+                          fill
+                          className="object-cover"
+                          sizes="64px"
+                          loading={currentIndex === idxVisible ? undefined : 'lazy'}
+                          priority={currentIndex === idxVisible}
+                        />
+                      ) : (
+                        <div className="absolute inset-0 bg-muted" aria-hidden="true" />
+                      )}
+                    </button>
+                  );
+                });
               })}
           </div>
         </div>
