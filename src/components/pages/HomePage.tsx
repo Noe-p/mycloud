@@ -1,111 +1,85 @@
 'use client';
 
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
-import { useScan } from '@/hooks/useScan';
-import { Media } from '@/types/Media';
+import { AlbumCard } from '@/components/Albums/AlbumCard';
+import { SpinnerLoader } from '@/components/Loaders/SpinnerLoader';
+import { Layout } from '@/components/utils/Layout';
+import { P16 } from '@/components/utils/Texts';
+import { useAppContext } from '@/contexts';
 import { useTranslations } from 'next-intl';
 import React from 'react';
-import { Loader } from '../Loaders/Loader';
-import { MediaGrid } from '../Medias/MediaGrid';
-import { Layout } from '../utils/Layout';
 
-const ITEMS_PER_PAGE = 50; // Nombre d'images à charger par batch
+interface Album {
+  id: string;
+  name: string;
+  path: string;
+  relativePath: string;
+  mediaCount: number;
+  subAlbums: Album[];
+  coverThumb?: string | undefined;
+  hasMedia: boolean;
+}
 
 export function HomePage(): React.JSX.Element {
-  const [allThumbs, setAllThumbs] = React.useState<Media[]>([]);
-  const [displayedThumbs, setDisplayedThumbs] = React.useState<Media[]>([]);
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [isLoadingMore, setIsLoadingMore] = React.useState(false);
-  const [totalMediaCount, setTotalMediaCount] = React.useState(0);
-  const [hasMoreOnServer, setHasMoreOnServer] = React.useState(true);
-  const { fetchThumbs } = useScan();
+  const [albums, setAlbums] = React.useState<Album[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
   const tCommons = useTranslations('common');
+  const { setCurrentAlbum, setMediaCounts } = useAppContext();
 
-  // Chargement initial des thumbnails (100 premiers)
+  // Réinitialiser l'album actuel sur la page d'accueil
   React.useEffect(() => {
-    void fetchThumbs(false, 100, 0).then((thumbs) => {
-      setAllThumbs(thumbs);
-      setDisplayedThumbs(thumbs.slice(0, ITEMS_PER_PAGE));
-      setCurrentPage(1);
-      // Le total sera mis à jour via l'événement ou on peut le récupérer directement
-    });
-  }, []);
+    setCurrentAlbum(null);
+  }, [setCurrentAlbum]);
 
-  // Écouter les événements de rafraîchissement (après un scan)
   React.useEffect(() => {
-    const handleMediasRefresh = (
-      event: CustomEvent<{ thumbs: Media[]; total?: number; hasMore?: boolean }>,
-    ) => {
-      const { thumbs, total, hasMore } = event.detail;
-      setAllThumbs(thumbs);
-      setDisplayedThumbs(thumbs.slice(0, ITEMS_PER_PAGE));
-      setCurrentPage(1);
-      if (total !== undefined) setTotalMediaCount(total);
-      if (hasMore !== undefined) setHasMoreOnServer(hasMore);
-    };
+    void fetch('/api/albums')
+      .then((res) => res.json())
+      .then((data: { albums: Album[] }) => {
+        setAlbums(data.albums);
 
-    window.addEventListener('mediasRefreshed', handleMediasRefresh as EventListener);
+        // Compter seulement les médias et albums visibles (niveau racine)
+        let totalMedias = 0;
+        data.albums.forEach((album) => {
+          totalMedias += album.mediaCount;
+        });
 
-    return () => {
-      window.removeEventListener('mediasRefreshed', handleMediasRefresh as EventListener);
-    };
-  }, []);
+        setMediaCounts({
+          total: totalMedias,
+          images: 0,
+          videos: 0,
+          totalMedias,
+          totalAlbums: 0, // Pas d'albums affichés sur la home
+        });
 
-  const hasMore = displayedThumbs.length < allThumbs.length || hasMoreOnServer;
-
-  const loadMore = React.useCallback(() => {
-    if (isLoadingMore) return;
-
-    // Si on a affiché tout ce qu'on a chargé du serveur ET qu'il y a plus de données côté serveur
-    if (displayedThumbs.length >= allThumbs.length && hasMoreOnServer && allThumbs.length > 0) {
-      setIsLoadingMore(true);
-      // Charger plus de données depuis le serveur
-      void fetchThumbs(false, 100, allThumbs.length).then((newThumbs) => {
-        const combined = [...allThumbs, ...newThumbs];
-        setAllThumbs(combined);
-        setDisplayedThumbs(combined.slice(0, displayedThumbs.length + ITEMS_PER_PAGE));
-        setHasMoreOnServer(newThumbs.length === 100); // S'il y a moins de 100, on a tout chargé
-        setIsLoadingMore(false);
+        setIsLoading(false);
+      })
+      .catch((error) => {
+        console.error('Error loading albums:', error);
+        setIsLoading(false);
       });
-      return;
-    }
+  }, [setMediaCounts]);
 
-    // Sinon, afficher plus d'éléments déjà chargés
-    if (displayedThumbs.length >= allThumbs.length) return;
+  console.log(albums);
 
-    setIsLoadingMore(true);
-
-    // Simuler un petit délai pour un chargement plus fluide
-    setTimeout(() => {
-      const nextPage = currentPage + 1;
-      const start = 0;
-      const end = nextPage * ITEMS_PER_PAGE;
-      setDisplayedThumbs(allThumbs.slice(start, end));
-      setCurrentPage(nextPage);
-      setIsLoadingMore(false);
-    }, 300);
-  }, [currentPage, allThumbs, displayedThumbs.length, hasMoreOnServer, isLoadingMore, fetchThumbs]);
-
-  const { observerTarget } = useInfiniteScroll({
-    hasMore,
-    isLoading: isLoadingMore,
-    onLoadMore: loadMore,
-  });
+  if (isLoading) {
+    return (
+      <Layout className="md:px-10 px-2">
+        <SpinnerLoader className="mt-22 h-64" />
+      </Layout>
+    );
+  }
 
   return (
-    <Layout className="md:px-10">
+    <Layout className="md:px-10 px-2">
       <div className="mt-22">
-        <MediaGrid medias={displayedThumbs} />
-
-        {/* Sentinel pour l'infinite scroll */}
-        <div ref={observerTarget} className="h-20 flex items-center justify-center">
-          {isLoadingMore && <Loader />}
-        </div>
-
-        {/* Message de fin */}
-        {!hasMore && !hasMoreOnServer && allThumbs.length > 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            {tCommons('home.allImagesLoaded', { count: totalMediaCount || allThumbs.length })}
+        {albums.length == 0 ? (
+          <div className="text-center py-12">
+            <P16 className="italic text-muted-foreground">{tCommons('generics.noAlbum')}</P16>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {albums.map((album) => (
+              <AlbumCard key={album.id} album={album} />
+            ))}
           </div>
         )}
       </div>

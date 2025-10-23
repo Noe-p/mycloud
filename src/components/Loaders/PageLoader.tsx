@@ -1,6 +1,6 @@
 'use client';
+import { ColCenter } from '@/components/utils/Flex';
 import { cn } from '@/services/utils';
-import { ColCenter } from '@/static/styles/Flex';
 import React, { useEffect, useState } from 'react';
 import { Logo } from '../Medias/Logo';
 import { P24 } from '../utils/Texts';

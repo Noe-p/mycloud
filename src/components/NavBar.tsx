@@ -1,7 +1,7 @@
 'use client';
 
+import { Col, Row } from '@/components/utils/Flex';
 import { cn } from '@/services/utils';
-import { Col, Row } from '@/static/styles/Flex';
 import { useTranslations } from 'next-intl';
 
 import { useAppContext } from '@/contexts';
@@ -27,7 +27,7 @@ interface NavBarProps {
 
 export function NavBar({ className }: NavBarProps): React.JSX.Element {
   const tCommons = useTranslations('common');
-  const { mediaCounts } = useAppContext();
+  const { mediaCounts, currentAlbum } = useAppContext();
   const { handleScan, loading } = useScan();
   const [open, setOpen] = React.useState(false);
   const [scanProgress, setScanProgress] = React.useState<ScanState | null>(null);
@@ -129,8 +129,40 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
     >
       <Row className="max-w-7xl mx-auto px-4 md:px-8 lg:px-16 items-center h-22 justify-between">
         <Col>
-          <H1 className="">{tCommons('navbar.title')}</H1>
-          <P16 className="">{tCommons('navbar.nbElements', { count: mediaCounts.total })}</P16>
+          <H1 className="">{currentAlbum ? currentAlbum.name : tCommons('navbar.title')}</H1>
+          <P16 className="">
+            {currentAlbum ? (
+              <>
+                {currentAlbum.mediaCount}{' '}
+                {currentAlbum.mediaCount === 1 ? tCommons('album.media') : tCommons('album.medias')}
+                {currentAlbum.subAlbumsCount > 0 && (
+                  <>
+                    {' - '}
+                    {currentAlbum.subAlbumsCount}{' '}
+                    {currentAlbum.subAlbumsCount === 1
+                      ? tCommons('album.subAlbum')
+                      : tCommons('album.subAlbums')}
+                  </>
+                )}
+              </>
+            ) : mediaCounts.totalMedias !== undefined && mediaCounts.totalAlbums !== undefined ? (
+              <>
+                {mediaCounts.totalMedias}{' '}
+                {mediaCounts.totalMedias === 1 ? tCommons('album.media') : tCommons('album.medias')}
+                {mediaCounts.totalAlbums > 0 && (
+                  <>
+                    {' - '}
+                    {mediaCounts.totalAlbums}{' '}
+                    {mediaCounts.totalAlbums === 1
+                      ? tCommons('album.subAlbum')
+                      : tCommons('album.subAlbums')}
+                  </>
+                )}
+              </>
+            ) : (
+              tCommons('navbar.nbElements', { count: mediaCounts.total })
+            )}
+          </P16>
         </Col>
 
         <Drawer open={open} onOpenChange={setOpen}>

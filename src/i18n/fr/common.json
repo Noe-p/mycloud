@@ -2,7 +2,16 @@
   "language": "fr",
   "generics": {
     "privacyPolicy": "Politique de confidentialité",
-    "close": "Fermer"
+    "close": "Fermer",
+    "noAlbum": "Aucun album trouvé"
+  },
+  "album": {
+    "media": "média",
+    "medias": "médias",
+    "subAlbum": "album",
+    "subAlbums": "albums",
+    "allMediasLoaded": "Tous les médias chargés ({count})",
+    "noMedia": "Aucun média dans cet album"
   },
   "home": {
     "allImagesLoaded": "Toutes les photos ont été chargées ({count} au total)",

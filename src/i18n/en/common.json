@@ -2,7 +2,16 @@
   "language": "en",
   "generics": {
     "privacyPolicy": "Privacy Policy",
-    "close": "Close"
+    "close": "Close",
+    "noAlbum": "No album found"
+  },
+  "album": {
+    "media": "media",
+    "medias": "medias",
+    "subAlbum": "album",
+    "subAlbums": "albums",
+    "allMediasLoaded": "All medias loaded ({count})",
+    "noMedia": "No media in this album"
   },
   "home": {
     "allImagesLoaded": "All images loaded ({count} in total)",

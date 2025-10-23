@@ -3,7 +3,7 @@ FROM node:18-alpine AS dependencies
 WORKDIR /app
 
 # Installer les dépendances nécessaires pour sharp et autres packages natifs
-RUN apk add --no-cache libc6-compat python3 make g++ ffmpeg
+RUN apk add --no-cache libc6-compat python3 make g++ ffmpeg exiftool perl
 
 # Copier les fichiers de dépendances
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* bun.lockb* ./
@@ -44,8 +44,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Installer ffmpeg pour la génération de thumbs vidéo
-RUN apk add --no-cache ffmpeg
+# Installer ffmpeg et exiftool pour la génération de thumbs et lecture EXIF
+RUN apk add --no-cache ffmpeg exiftool perl
 
 # Créer un utilisateur non-root
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs

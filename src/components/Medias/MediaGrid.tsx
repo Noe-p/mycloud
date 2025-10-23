@@ -1,4 +1,4 @@
-import { Grid10 } from '@/static/styles/Grid';
+import { Grid10 } from '@/components/utils/Grid';
 import { Media } from '@/types/Media';
 import Image from 'next/image';
 import { useState } from 'react';

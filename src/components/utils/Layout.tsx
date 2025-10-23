@@ -1,6 +1,6 @@
 'use client';
+import { Col } from '@/components/utils/Flex';
 import { cn } from '@/services/utils';
-import { Col } from '@/static/styles/Flex';
 import React, { ReactNode } from 'react';
 import { Footer } from '../Footer';
 import { NavBar } from '../NavBar';

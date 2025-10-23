@@ -1,5 +1,5 @@
+import { ColCenter } from '@/components/utils/Flex';
 import { cn } from '@/services/utils';
-import { ColCenter } from '@/static/styles/Flex';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { P12, P14 } from './utils/Texts';
