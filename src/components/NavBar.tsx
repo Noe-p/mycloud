@@ -4,9 +4,9 @@ import { Col, Row } from '@/components/utils/Flex';
 import { cn } from '@/services/utils';
 import { useTranslations } from 'next-intl';
 
-import { useAppContext } from '@/contexts';
+import { useAlbumsContext, useAppContext, useMediaContext } from '@/contexts';
 import { useScan } from '@/hooks/useScan';
-import { ScanState } from '@/types/Scan';
+import { useScanProgress } from '@/hooks/useScanProgress';
 import { MoreVertical, Scan } from 'lucide-react';
 import React from 'react';
 import { Button } from './ui/button';
@@ -27,68 +27,13 @@ interface NavBarProps {
 
 export function NavBar({ className }: NavBarProps): React.JSX.Element {
   const tCommons = useTranslations('common');
-  const { mediaCounts, currentAlbum } = useAppContext();
+  const { currentAlbum } = useAppContext();
+  const { mediaCounts } = useMediaContext();
+  const { albumCounts } = useAlbumsContext();
   const { handleScan, loading } = useScan();
+  const { scanProgress } = useScanProgress();
   const [open, setOpen] = React.useState(false);
-  const [scanProgress, setScanProgress] = React.useState<ScanState | null>(null);
   const [mediaDirs, setMediaDirs] = React.useState<string[]>([]);
-  const eventSourceRef = React.useRef<EventSource | null>(null);
-
-  // Se connecter au SSE au montage pour recevoir les mises à jour en temps réel
-  React.useEffect(() => {
-    // Créer la connexion SSE
-    const eventSource = new EventSource('/api/scan-progress');
-
-    eventSource.onmessage = (event) => {
-      try {
-        const data: unknown = event.data;
-        if (typeof data !== 'string') return;
-
-        const state = JSON.parse(data) as ScanState;
-
-        // Ignorer le message de connexion initial
-        if (
-          'type' in state &&
-          'type' in (state as Record<string, unknown>) &&
-          (state as Record<string, unknown>).type === 'connected'
-        ) {
-          return;
-        }
-
-        setScanProgress(state);
-
-        // Émettre un événement pour d'autres composants si nécessaire
-        window.dispatchEvent(
-          new CustomEvent('scanProgress', {
-            detail: state,
-          }),
-        );
-      } catch (error) {
-        console.error('Erreur parsing SSE message:', error);
-      }
-    };
-
-    eventSource.onerror = (error) => {
-      console.error('Erreur connexion SSE:', error);
-      // Tenter de reconnecter automatiquement après 5 secondes
-      setTimeout(() => {
-        if (eventSourceRef.current) {
-          eventSourceRef.current.close();
-        }
-        // Le EventSource se reconnecte automatiquement
-      }, 5000);
-    };
-
-    eventSourceRef.current = eventSource;
-
-    // Cleanup à la déconnexion
-    return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
-      }
-    };
-  }, []);
 
   // Charger les dossiers actuels au montage
   React.useEffect(() => {
@@ -134,15 +79,15 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
                   </>
                 )}
               </>
-            ) : mediaCounts.totalMedias !== undefined && mediaCounts.totalAlbums !== undefined ? (
+            ) : albumCounts.totalMedias !== undefined && albumCounts.totalAlbums !== undefined ? (
               <>
-                {mediaCounts.totalMedias}{' '}
-                {mediaCounts.totalMedias === 1 ? tCommons('album.media') : tCommons('album.medias')}
-                {mediaCounts.totalAlbums > 0 && (
+                {albumCounts.totalMedias}{' '}
+                {albumCounts.totalMedias === 1 ? tCommons('album.media') : tCommons('album.medias')}
+                {albumCounts.totalAlbums > 0 && (
                   <>
                     {' - '}
-                    {mediaCounts.totalAlbums}{' '}
-                    {mediaCounts.totalAlbums === 1
+                    {albumCounts.totalAlbums}{' '}
+                    {albumCounts.totalAlbums === 1
                       ? tCommons('album.subAlbum')
                       : tCommons('album.subAlbums')}
                   </>
@@ -207,12 +152,15 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
                 onClick={() => {
                   void onScan();
                 }}
-                disabled={loading || mediaDirs.length === 0}
+                disabled={loading || mediaDirs.length === 0 || (scanProgress?.isScanning ?? false)}
+                isLoading={loading || (scanProgress?.isScanning ?? false)}
                 className="w-full justify-start"
                 variant="default"
               >
                 <Scan className="mr-2 h-4 w-4" />
-                {loading ? tCommons('navbar.menu.scanning') : tCommons('navbar.menu.scan')}
+                {loading || scanProgress?.isScanning
+                  ? tCommons('navbar.menu.scanning')
+                  : tCommons('navbar.menu.scan')}
               </Button>
               <DrawerClose asChild>
                 <Button variant="outline">{tCommons('generics.close')}</Button>

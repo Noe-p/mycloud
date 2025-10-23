@@ -17,6 +17,7 @@ import { Layout } from '@/components/utils/Layout';
 import { P16 } from '@/components/utils/Texts';
 import { useAppContext } from '@/contexts';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { useScanProgress } from '@/hooks/useScanProgress';
 import { Media } from '@/types/Media';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -40,6 +41,8 @@ export function AlbumDetailPage(): React.JSX.Element {
   const albumPath = params?.albumPath as string;
   const t = useTranslations('common');
   const { setCurrentAlbum } = useAppContext();
+  const { scanProgress } = useScanProgress();
+  const previousScanningRef = React.useRef<boolean>(false);
 
   const [medias, setMedias] = React.useState<Media[]>([]);
   const [displayedMedias, setDisplayedMedias] = React.useState<Media[]>([]);
@@ -55,7 +58,7 @@ export function AlbumDetailPage(): React.JSX.Element {
   );
 
   // Charger les informations de l'album et ses sous-albums
-  React.useEffect(() => {
+  const loadAlbumInfo = React.useCallback(() => {
     void fetch('/api/albums')
       .then((res) => res.json())
       .then((data: { albums: Album[] }) => {
@@ -101,6 +104,10 @@ export function AlbumDetailPage(): React.JSX.Element {
       });
   }, [albumPath]);
 
+  React.useEffect(() => {
+    loadAlbumInfo();
+  }, [loadAlbumInfo]);
+
   // Réinitialiser l'album actuel quand on quitte la page
   React.useEffect(() => {
     return () => {
@@ -109,7 +116,7 @@ export function AlbumDetailPage(): React.JSX.Element {
   }, [setCurrentAlbum]);
 
   // Charger les médias de l'album
-  React.useEffect(() => {
+  const loadMedias = React.useCallback(() => {
     setIsLoading(true);
     void fetch(`/api/albums/${albumPath}?limit=50&offset=0`)
       .then((res) => res.json())
@@ -134,6 +141,25 @@ export function AlbumDetailPage(): React.JSX.Element {
         setIsLoading(false);
       });
   }, [albumPath]);
+
+  React.useEffect(() => {
+    loadMedias();
+  }, [loadMedias]);
+
+  // Rafraîchir les médias et infos de l'album quand le scan se termine
+  React.useEffect(() => {
+    const wasScanning = previousScanningRef.current;
+    const isCurrentlyScanning = scanProgress?.isScanning ?? false;
+
+    // Si on était en train de scanner et que maintenant on ne scanne plus, rafraîchir
+    if (wasScanning && !isCurrentlyScanning && scanProgress?.progress === 100) {
+      console.log('[AlbumDetailPage] Scan terminé, rafraîchissement des médias...');
+      loadMedias();
+      loadAlbumInfo();
+    }
+
+    previousScanningRef.current = isCurrentlyScanning;
+  }, [scanProgress?.isScanning, scanProgress?.progress, loadMedias, loadAlbumInfo]);
 
   // Mettre à jour le contexte quand on a les infos complètes
   React.useEffect(() => {

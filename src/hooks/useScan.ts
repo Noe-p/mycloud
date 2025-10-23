@@ -1,17 +1,17 @@
 'use client';
 
-import { useAppContext } from '@/contexts';
-import { MediaCounts } from '@/contexts/AppContext';
+import { useMediaContext } from '@/contexts';
+import { MediaCounts } from '@/contexts/MediaContext';
 import { Media } from '@/types/Media';
-import { ScanResponse, ScanState } from '@/types/Scan';
+import { ScanResponse } from '@/types/Scan';
 import React from 'react';
+import { useScanProgress } from './useScanProgress';
 
 export function useScan() {
   const [loading, setLoading] = React.useState(false);
-  const [scanState, setScanState] = React.useState<ScanState | null>(null);
-  const { setMediaCounts } = useAppContext();
+  const { setMediaCounts } = useMediaContext();
+  const { scanProgress } = useScanProgress();
   const pollingRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
-  const eventSourceRef = React.useRef<EventSource | null>(null);
   const isFetchingRef = React.useRef(false);
 
   type ThumbsResponse = {
@@ -89,10 +89,6 @@ export function useScan() {
         clearInterval(pollingRef.current);
         pollingRef.current = null;
       }
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
-      }
     };
   }, []);
 
@@ -108,53 +104,8 @@ export function useScan() {
     // Récupérer la liste initiale pour créer les placeholders
     await fetchThumbs(true);
 
-    // Se connecter au flux SSE pour recevoir les mises à jour de progression
-    if (!eventSourceRef.current) {
-      const eventSource = new EventSource('/api/scan-progress');
-
-      eventSource.onmessage = (event) => {
-        try {
-          const data: unknown = event.data;
-          if (typeof data !== 'string') return;
-
-          const state = JSON.parse(data) as ScanState;
-
-          // Ignorer le message de connexion initial
-          if (
-            'type' in state &&
-            'type' in (state as Record<string, unknown>) &&
-            (state as Record<string, unknown>).type === 'connected'
-          ) {
-            return;
-          }
-
-          setScanState(state);
-
-          // Émettre un événement pour afficher la progression dans l'UI
-          window.dispatchEvent(
-            new CustomEvent('scanProgress', {
-              detail: state,
-            }),
-          );
-
-          // Si le scan est terminé, fermer la connexion SSE
-          if (!state.isScanning) {
-            eventSource.close();
-            eventSourceRef.current = null;
-          }
-        } catch (error) {
-          console.error('Erreur parsing SSE message:', error);
-        }
-      };
-
-      eventSource.onerror = (error) => {
-        console.error('Erreur SSE:', error);
-        eventSource.close();
-        eventSourceRef.current = null;
-      };
-
-      eventSourceRef.current = eventSource;
-    }
+    // La connexion SSE est déjà gérée par useScanProgress
+    // On n'a plus besoin de la dupliquer ici
 
     // Start polling thumbs while scan is running
     if (!pollingRef.current) {
@@ -184,11 +135,10 @@ export function useScan() {
       pollingRef.current = null;
     }
 
-    setScanState(null);
     setLoading(false);
 
     return thumbs;
   };
 
-  return { handleScan, fetchThumbs, loading, scanState };
+  return { handleScan, fetchThumbs, loading, scanProgress };
 }

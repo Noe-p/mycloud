@@ -1,7 +1,7 @@
 'use client';
 
 import Umami from '@/components/utils/Umami';
-import { AppProvider } from '@/contexts/AppContext';
+import { AlbumsProvider, AppProvider, MediaProvider } from '@/contexts';
 import { Locale, messages } from '@/i18n/config';
 import { IntlProvider } from 'next-intl';
 import { Darker_Grotesque, Montserrat } from 'next/font/google';
@@ -48,7 +48,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body>
         <IntlProvider timeZone={timeZone} messages={messages[locale]} locale={locale}>
-          <AppProvider>{children}</AppProvider>
+          <AppProvider>
+            <MediaProvider>
+              <AlbumsProvider>{children}</AlbumsProvider>
+            </MediaProvider>
+          </AppProvider>
         </IntlProvider>
         <Umami />
       </body>

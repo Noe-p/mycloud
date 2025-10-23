@@ -4,7 +4,8 @@ import { AlbumCard } from '@/components/Albums/AlbumCard';
 import { SpinnerLoader } from '@/components/Loaders/SpinnerLoader';
 import { Layout } from '@/components/utils/Layout';
 import { P16 } from '@/components/utils/Texts';
-import { useAppContext } from '@/contexts';
+import { useAlbumsContext, useAppContext } from '@/contexts';
+import { useScanProgress } from '@/hooks/useScanProgress';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 
@@ -23,14 +24,18 @@ export function HomePage(): React.JSX.Element {
   const [albums, setAlbums] = React.useState<Album[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const tCommons = useTranslations('common');
-  const { setCurrentAlbum, setMediaCounts } = useAppContext();
+  const { setCurrentAlbum } = useAppContext();
+  const { setAlbumCounts } = useAlbumsContext();
+  const { scanProgress } = useScanProgress();
+  const previousScanningRef = React.useRef<boolean>(false);
 
   // Réinitialiser l'album actuel sur la page d'accueil
   React.useEffect(() => {
     setCurrentAlbum(null);
   }, [setCurrentAlbum]);
 
-  React.useEffect(() => {
+  const loadAlbums = React.useCallback(() => {
+    setIsLoading(true);
     void fetch('/api/albums')
       .then((res) => res.json())
       .then((data: { albums: Album[] }) => {
@@ -42,10 +47,7 @@ export function HomePage(): React.JSX.Element {
           totalMedias += album.mediaCount;
         });
 
-        setMediaCounts({
-          total: totalMedias,
-          images: 0,
-          videos: 0,
+        setAlbumCounts({
           totalMedias,
           totalAlbums: 0, // Pas d'albums affichés sur la home
         });
@@ -56,7 +58,25 @@ export function HomePage(): React.JSX.Element {
         console.error('Error loading albums:', error);
         setIsLoading(false);
       });
-  }, [setMediaCounts]);
+  }, [setAlbumCounts]);
+
+  React.useEffect(() => {
+    loadAlbums();
+  }, [loadAlbums]);
+
+  // Rafraîchir les albums quand le scan se termine
+  React.useEffect(() => {
+    const wasScanning = previousScanningRef.current;
+    const isCurrentlyScanning = scanProgress?.isScanning ?? false;
+
+    // Si on était en train de scanner et que maintenant on ne scanne plus, rafraîchir
+    if (wasScanning && !isCurrentlyScanning && scanProgress?.progress === 100) {
+      console.log('[HomePage] Scan terminé, rafraîchissement des albums...');
+      loadAlbums();
+    }
+
+    previousScanningRef.current = isCurrentlyScanning;
+  }, [scanProgress?.isScanning, scanProgress?.progress, loadAlbums]);
 
   console.log(albums);
 
