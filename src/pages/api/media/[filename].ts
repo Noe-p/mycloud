@@ -47,7 +47,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 function buildFileIdCache(): Map<string, string> {
   const now = Date.now();
-  
+
   // Invalider le cache après TTL
   if (fileIdCache && now - cacheTimestamp < CACHE_TTL) {
     return fileIdCache;
@@ -133,7 +133,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
   // Gérer les range requests (nécessaire pour le seeking dans les vidéos)
   const range = req.headers.range;
-  
+
   if (range) {
     const parts = range.replace(/bytes=/, '').split('-');
     const start = parseInt(parts[0], 10);
