@@ -4,6 +4,7 @@ import fs from 'fs';
 import { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
 import sharp from 'sharp';
+import { broadcastScanProgress } from './scan-progress';
 
 // Support des dossiers multiples
 const getMediaDirs = (): string[] => {
@@ -105,7 +106,7 @@ async function generateVideoThumb(srcPath: string, destPath: string) {
   });
 }
 
-// Fonction pour écrire l'état du scan
+// Fonction pour écrire l'état du scan et le diffuser via SSE
 function writeScanState(state: {
   isScanning: boolean;
   progress: number;
@@ -119,6 +120,8 @@ function writeScanState(state: {
 }) {
   try {
     fs.writeFileSync(scanStatePath, JSON.stringify(state, null, 2));
+    // Diffuser l'état à tous les clients SSE connectés
+    broadcastScanProgress(state as ScanState);
   } catch (e) {
     console.error('Erreur écriture scan state:', e);
   }

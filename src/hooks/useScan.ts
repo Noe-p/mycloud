@@ -11,7 +11,7 @@ export function useScan() {
   const [scanState, setScanState] = React.useState<ScanState | null>(null);
   const { setMediaCounts } = useAppContext();
   const pollingRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
-  const scanPollingRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const eventSourceRef = React.useRef<EventSource | null>(null);
   const isFetchingRef = React.useRef(false);
 
   type ThumbsResponse = {
@@ -89,23 +89,12 @@ export function useScan() {
         clearInterval(pollingRef.current);
         pollingRef.current = null;
       }
-      if (scanPollingRef.current) {
-        clearInterval(scanPollingRef.current);
-        scanPollingRef.current = null;
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
     };
   }, []);
-
-  const fetchScanState = async (): Promise<ScanState | null> => {
-    try {
-      const res = await fetch('/api/scan', { method: 'GET' });
-      const json: unknown = await res.json();
-      return json as ScanState;
-    } catch (e) {
-      console.error('Erreur fetch scan state:', e);
-      return null;
-    }
-  };
 
   const isScanResponse = (val: unknown): val is ScanResponse => {
     return (
@@ -119,27 +108,52 @@ export function useScan() {
     // Récupérer la liste initiale pour créer les placeholders
     await fetchThumbs(true);
 
-    // Start polling scan state to track progress
-    if (!scanPollingRef.current) {
-      scanPollingRef.current = setInterval(() => {
-        void (async () => {
-          const state = await fetchScanState();
-          if (state) {
-            setScanState(state);
-            // Émettre un événement pour afficher la progression
-            window.dispatchEvent(
-              new CustomEvent('scanProgress', {
-                detail: state,
-              }),
-            );
-            // Arrêter le polling si le scan est terminé
-            if (!state.isScanning && scanPollingRef.current) {
-              clearInterval(scanPollingRef.current);
-              scanPollingRef.current = null;
-            }
+    // Se connecter au flux SSE pour recevoir les mises à jour de progression
+    if (!eventSourceRef.current) {
+      const eventSource = new EventSource('/api/scan-progress');
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data: unknown = event.data;
+          if (typeof data !== 'string') return;
+
+          const state = JSON.parse(data) as ScanState;
+
+          // Ignorer le message de connexion initial
+          if (
+            'type' in state &&
+            'type' in (state as Record<string, unknown>) &&
+            (state as Record<string, unknown>).type === 'connected'
+          ) {
+            return;
           }
-        })();
-      }, 500); // Vérifier toutes les 500ms
+
+          setScanState(state);
+
+          // Émettre un événement pour afficher la progression dans l'UI
+          window.dispatchEvent(
+            new CustomEvent('scanProgress', {
+              detail: state,
+            }),
+          );
+
+          // Si le scan est terminé, fermer la connexion SSE
+          if (!state.isScanning) {
+            eventSource.close();
+            eventSourceRef.current = null;
+          }
+        } catch (error) {
+          console.error('Erreur parsing SSE message:', error);
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('Erreur SSE:', error);
+        eventSource.close();
+        eventSourceRef.current = null;
+      };
+
+      eventSourceRef.current = eventSource;
     }
 
     // Start polling thumbs while scan is running
@@ -168,10 +182,6 @@ export function useScan() {
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
-    }
-    if (scanPollingRef.current) {
-      clearInterval(scanPollingRef.current);
-      scanPollingRef.current = null;
     }
 
     setScanState(null);

@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useAppContext } from '@/contexts';
 import { useScan } from '@/hooks/useScan';
 import { ScanState } from '@/types/Scan';
-import { MoreVertical, Scan, X } from 'lucide-react';
+import { MoreVertical, Scan } from 'lucide-react';
 import React from 'react';
 import { Button } from './ui/button';
 import {
@@ -32,19 +32,61 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
   const [open, setOpen] = React.useState(false);
   const [scanProgress, setScanProgress] = React.useState<ScanState | null>(null);
   const [mediaDirs, setMediaDirs] = React.useState<string[]>([]);
-  const [newFolder, setNewFolder] = React.useState<string>('');
-  const [loadingFolder, setLoadingFolder] = React.useState(false);
+  const eventSourceRef = React.useRef<EventSource | null>(null);
 
-  // Écouter les événements de progression du scan
+  // Se connecter au SSE au montage pour recevoir les mises à jour en temps réel
   React.useEffect(() => {
-    const handleScanProgress = (event: CustomEvent<ScanState>) => {
-      setScanProgress(event.detail);
+    // Créer la connexion SSE
+    const eventSource = new EventSource('/api/scan-progress');
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data: unknown = event.data;
+        if (typeof data !== 'string') return;
+
+        const state = JSON.parse(data) as ScanState;
+
+        // Ignorer le message de connexion initial
+        if (
+          'type' in state &&
+          'type' in (state as Record<string, unknown>) &&
+          (state as Record<string, unknown>).type === 'connected'
+        ) {
+          return;
+        }
+
+        setScanProgress(state);
+
+        // Émettre un événement pour d'autres composants si nécessaire
+        window.dispatchEvent(
+          new CustomEvent('scanProgress', {
+            detail: state,
+          }),
+        );
+      } catch (error) {
+        console.error('Erreur parsing SSE message:', error);
+      }
     };
 
-    window.addEventListener('scanProgress', handleScanProgress as EventListener);
+    eventSource.onerror = (error) => {
+      console.error('Erreur connexion SSE:', error);
+      // Tenter de reconnecter automatiquement après 5 secondes
+      setTimeout(() => {
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+        }
+        // Le EventSource se reconnecte automatiquement
+      }, 5000);
+    };
 
+    eventSourceRef.current = eventSource;
+
+    // Cleanup à la déconnexion
     return () => {
-      window.removeEventListener('scanProgress', handleScanProgress as EventListener);
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
     };
   }, []);
 
@@ -65,60 +107,7 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
   }, []);
 
   const onScan = async () => {
-    setOpen(false);
     await handleScan();
-  };
-
-  const handleAddFolder = async (folderPath: string) => {
-    if (!folderPath.trim()) return;
-
-    setLoadingFolder(true);
-    try {
-      // Ajouter le nouveau dossier à la liste existante
-      const updatedDirs = [...mediaDirs, folderPath.trim()];
-
-      const res = await fetch('/api/media-dir', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mediaDirs: updatedDirs }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setMediaDirs(data.mediaDirs as string[]);
-        setNewFolder('');
-      } else {
-        alert(`Error: ${data.error || 'Failed to add folder'}`);
-      }
-    } catch (error) {
-      console.error('Error adding folder:', error);
-      alert('Failed to add folder');
-    } finally {
-      setLoadingFolder(false);
-    }
-  };
-
-  const handleRemoveFolder = async (folderPath: string) => {
-    setLoadingFolder(true);
-    try {
-      const res = await fetch('/api/media-dir', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mediaDir: folderPath }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setMediaDirs(data.mediaDirs as string[]);
-      } else {
-        alert(`Error: ${data.error || 'Failed to remove folder'}`);
-      }
-    } catch (error) {
-      console.error('Error removing folder:', error);
-      alert('Failed to remove folder');
-    } finally {
-      setLoadingFolder(false);
-    }
   };
 
   return (
@@ -193,52 +182,24 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
                         className="flex items-center justify-between gap-2 p-2 rounded-md bg-secondary/50 border border-border"
                       >
                         <P12 className="truncate text-foreground flex-1">{dir}</P12>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 shrink-0"
-                          onClick={() => {
-                            void handleRemoveFolder(dir);
-                          }}
-                          disabled={loadingFolder}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-
-              {/* Ajouter un nouveau dossier */}
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  value={newFolder}
-                  onChange={(e) => setNewFolder(e.target.value)}
-                  placeholder={tCommons('navbar.menu.folderPlaceholder')}
-                  className="w-full px-3 py-2 text-sm rounded-md border border-border bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && newFolder.trim()) {
-                      void handleAddFolder(newFolder);
-                    }
-                  }}
-                />
-                <Button
-                  onClick={() => {
-                    void handleAddFolder(newFolder);
-                  }}
-                  disabled={loadingFolder || !newFolder.trim()}
-                  className="w-full"
-                  variant="outline"
-                >
-                  {loadingFolder
-                    ? tCommons('generics.loading', { defaultValue: 'Loading...' })
-                    : tCommons('navbar.menu.addFolder')}
-                </Button>
-              </div>
             </div>
             <DrawerFooter>
+              {/* Barre de progression du scan */}
+              {scanProgress && scanProgress.isScanning && (
+                <div className="w-full mb-4">
+                  <div className="flex items-center justify-between pb-2 text-xs">
+                    <P14>{tCommons('home.scanningInProgress')}</P14>
+                    <P12>{`${scanProgress.scanned}/${scanProgress.total}`}</P12>
+                  </div>
+                  <Progress value={scanProgress.progress} className="h-1" />
+                </div>
+              )}
+
               {/* Bouton de scan */}
               <Button
                 onClick={() => {
@@ -258,17 +219,6 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
           </DrawerContent>
         </Drawer>
       </Row>
-
-      {/* Barre de progression du scan */}
-      {scanProgress && scanProgress.isScanning && (
-        <div className=" px-4 justify-center pb-2">
-          <div className="flex items-center justify-between pb-2 text-xs">
-            <P14>{tCommons('home.scanningInProgress')}</P14>
-            <P12>{`${scanProgress.scanned}/${scanProgress.total}`}</P12>
-          </div>
-          <Progress value={scanProgress.progress} className="h-1" />
-        </div>
-      )}
     </nav>
   );
 }
