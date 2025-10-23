@@ -82,8 +82,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Paramètres de pagination
-  const limit = parseInt(req.query.limit as string) || 50;
-  const offset = parseInt(req.query.offset as string) || 0;
+  const limit = parseInt(
+    Array.isArray(req.query.limit) ? req.query.limit[0] : req.query.limit ?? '50',
+  );
+  const offset = parseInt(
+    Array.isArray(req.query.offset) ? req.query.offset[0] : req.query.offset ?? '0',
+  );
 
   try {
     // Lister tous les fichiers du dossier (non récursif)
@@ -91,11 +95,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const mediaFiles = files
       .filter((file) => {
-        const filePath = path.join(targetDir!, file);
+        const filePath = path.join(targetDir, file);
         if (fs.statSync(filePath).isDirectory()) return false;
         return /\.(jpg|jpeg|png|gif|heic|mp4|mov|avi|mkv|hevc)$/i.test(file);
       })
-      .map((file) => path.join(targetDir!, file));
+      .map((file) => path.join(targetDir, file));
 
     const totalCount = mediaFiles.length;
     const paginatedFiles = mediaFiles.slice(offset, offset + limit);
@@ -110,8 +114,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const isVideo = /\.(mp4|mov|avi|mkv|hevc)$/i.test(fileName);
 
         // Créer un identifiant unique
-        const relativePath = path.relative(sourceDir!, filePath);
-        const fileId = getFileId(relativePath, sourceDir!);
+        const relativePath = path.relative(sourceDir, filePath);
+        const fileId = getFileId(relativePath, sourceDir);
         const thumbPath = path.join(thumbDir, `${fileId}.thumb.jpg`);
         const thumbReady = fs.existsSync(thumbPath);
 

@@ -1,8 +1,8 @@
 {
   "name": "Mycloud",
   "short_name": "Mycloud",
-  "theme_color": "hsl(0 3% 14%)",
-  "background_color": "hsl(0 3% 14%)",
+  "theme_color": "#121212",
+  "background_color": "#121212",
   "display": "standalone",
   "orientation": "portrait",
   "scope": "/",

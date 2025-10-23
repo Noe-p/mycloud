@@ -10,9 +10,12 @@ const CACHE_FILE = path.join(process.cwd(), 'public', 'exif-cache.json');
 function loadCache(): void {
   try {
     if (fs.existsSync(CACHE_FILE)) {
-      const data = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8'));
-      Object.entries(data).forEach(([key, value]) => {
-        dateCache.set(key, new Date(value as string));
+      const data: Record<string, string> = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8'));
+      Object.keys(data).forEach((key) => {
+        const value = data[key];
+        if (typeof value === 'string') {
+          dateCache.set(key, new Date(value));
+        }
       });
     }
   } catch (error) {

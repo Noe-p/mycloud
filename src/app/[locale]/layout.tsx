@@ -40,6 +40,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
   return (
     <html lang={locale} className={`${title.variable} ${text.variable}`}>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#121212" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      </head>
       <body>
         <IntlProvider timeZone={timeZone} messages={messages[locale]} locale={locale}>
           <AppProvider>{children}</AppProvider>
