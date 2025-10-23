@@ -60,11 +60,11 @@ export async function getMediaDate(filePath: string): Promise<Date> {
 
     // Tenter de lire les métadonnées EXIF pour les images
     const isImage = /\.(jpg|jpeg|png|gif|heic)$/i.test(filePath);
-    
+
     if (isImage) {
       try {
         const metadata = await exiftool.read(filePath);
-        
+
         // Chercher la date de prise de vue dans plusieurs champs EXIF
         const exifDate =
           metadata.DateTimeOriginal ||

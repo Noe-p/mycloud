@@ -1,8 +1,8 @@
+import { getMediaDate } from '@/services/exif';
 import crypto from 'crypto';
 import fs from 'fs';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
-import { getMediaDate } from '@/services/exif';
 
 // Support des dossiers multiples
 const getMediaDirs = (): string[] => {
@@ -25,7 +25,7 @@ async function getVideoDuration(filePath: string): Promise<string | null> {
     const { exec } = await import('child_process');
     const { promisify } = await import('util');
     const execPromise = promisify(exec);
-    
+
     const { stdout } = await execPromise(
       `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`,
     );
@@ -55,7 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Décoder le chemin de l'album (peut contenir des /)
   const decodedPath = decodeURIComponent(albumPath);
-  
+
   // Trouver le dossier source correspondant
   let targetDir: string | null = null;
   let sourceDir: string | null = null;
@@ -88,7 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Lister tous les fichiers du dossier (non récursif)
     const files = fs.readdirSync(targetDir);
-    
+
     const mediaFiles = files
       .filter((file) => {
         const filePath = path.join(targetDir!, file);
