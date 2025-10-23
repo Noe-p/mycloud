@@ -1,44 +1,10 @@
-import { getMediaDate } from '@/services/exif';
-import crypto from 'crypto';
+import { findAlbumByPath } from '@/services/api/album';
+import { getMediaDate } from '@/services/api/exif';
+import { isVideo as checkIsVideo, getFileId, getMediaDirs } from '@/services/api/media';
+import { getThumbUrl, getVideoDuration, thumbExists } from '@/services/api/thumbnail';
 import fs from 'fs';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
-
-// Support des dossiers multiples
-const getMediaDirs = (): string[] => {
-  const mediaDirs = process.env.MEDIA_DIRS || process.env.MEDIA_DIR || '';
-  return mediaDirs
-    .split(',')
-    .map((d) => d.trim())
-    .filter(Boolean);
-};
-
-// Fonction pour créer un identifiant unique basé sur le chemin et le dossier source
-function getFileId(relativePath: string, sourceDir: string): string {
-  const uniquePath = `${sourceDir}/${relativePath}`;
-  return crypto.createHash('sha256').update(uniquePath).digest('hex').substring(0, 16);
-}
-
-// Fonction pour obtenir la durée d'une vidéo
-async function getVideoDuration(filePath: string): Promise<string | null> {
-  try {
-    const { exec } = await import('child_process');
-    const { promisify } = await import('util');
-    const execPromise = promisify(exec);
-
-    const { stdout } = await execPromise(
-      `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`,
-    );
-    const seconds = parseFloat(stdout.trim());
-    if (isNaN(seconds)) return null;
-
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  } catch {
-    return null;
-  }
-}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { albumPath } = req.query;
@@ -53,33 +19,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'MEDIA_DIRS not set' });
   }
 
-  // Décoder le chemin de l'album (peut contenir des /)
-  const decodedPath = decodeURIComponent(albumPath);
+  // Trouver le dossier correspondant
+  const albumInfo = findAlbumByPath(mediaDirs, albumPath);
 
-  // Trouver le dossier source correspondant
-  let targetDir: string | null = null;
-  let sourceDir: string | null = null;
-
-  for (const mediaDir of mediaDirs) {
-    if (decodedPath === '' || decodedPath === path.basename(mediaDir)) {
-      // Dossier racine
-      targetDir = mediaDir;
-      sourceDir = mediaDir;
-      break;
-    } else {
-      // Sous-dossier
-      const fullPath = path.join(mediaDir, decodedPath);
-      if (fs.existsSync(fullPath) && fs.statSync(fullPath).isDirectory()) {
-        targetDir = fullPath;
-        sourceDir = mediaDir;
-        break;
-      }
-    }
-  }
-
-  if (!targetDir || !sourceDir) {
+  if (!albumInfo) {
     return res.status(404).json({ error: 'Album not found' });
   }
+
+  const { targetDir, sourceDir } = albumInfo;
 
   // Paramètres de pagination
   const limit = parseInt(
@@ -96,8 +43,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const mediaFiles = files
       .filter((file) => {
         const filePath = path.join(targetDir, file);
-        if (fs.statSync(filePath).isDirectory()) return false;
-        return /\.(jpg|jpeg|png|gif|heic|mp4|mov|avi|mkv|hevc)$/i.test(file);
+        try {
+          if (fs.statSync(filePath).isDirectory()) return false;
+          return /\.(jpg|jpeg|png|gif|heic|mp4|mov|avi|mkv|hevc)$/i.test(file);
+        } catch {
+          return false;
+        }
       })
       .map((file) => path.join(targetDir, file));
 
@@ -105,19 +56,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const paginatedFiles = mediaFiles.slice(offset, offset + limit);
     const hasMore = offset + limit < totalCount;
 
-    const thumbDir = process.env.THUMB_DIR || path.join(process.cwd(), 'public', 'thumbs');
-
     // Traiter les fichiers avec leurs dates
     const mediasWithDates = await Promise.all(
       paginatedFiles.map(async (filePath) => {
         const fileName = path.basename(filePath);
-        const isVideo = /\.(mp4|mov|avi|mkv|hevc)$/i.test(fileName);
+        const isVideo = checkIsVideo(fileName);
 
         // Créer un identifiant unique
         const relativePath = path.relative(sourceDir, filePath);
         const fileId = getFileId(relativePath, sourceDir);
-        const thumbPath = path.join(thumbDir, `${fileId}.thumb.jpg`);
-        const thumbReady = fs.existsSync(thumbPath);
+        const thumbReady = thumbExists(fileId);
 
         // Obtenir la date de création (EXIF ou stats)
         const createdDate = await getMediaDate(filePath);
@@ -130,7 +78,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return {
           file: relativePath,
           fileId,
-          thumb: `/api/serve-thumb/${fileId}`,
+          thumb: getThumbUrl(fileId),
           type: isVideo ? 'video' : 'image',
           duration,
           thumbReady,
@@ -151,7 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       hasMore,
       offset,
       limit,
-      albumPath: decodedPath,
+      albumPath: decodeURIComponent(albumPath),
     });
   } catch (error) {
     console.error('Error reading album:', error);

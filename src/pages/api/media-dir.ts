@@ -1,3 +1,4 @@
+import { getMediaDirs as getConfiguredMediaDirs } from '@/services/api/media';
 import fs from 'fs';
 import { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
@@ -7,13 +8,8 @@ const envPath = path.join(process.cwd(), '.env');
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // GET: Retourner les dossiers actuels
   if (req.method === 'GET') {
-    const mediaDirs = process.env.MEDIA_DIRS || process.env.MEDIA_DIR || '';
-    // Support des dossiers multiples séparés par des virgules
-    const dirsArray = mediaDirs
-      .split(',')
-      .map((d) => d.trim())
-      .filter(Boolean);
-    return res.status(200).json({ mediaDirs: dirsArray });
+    const mediaDirs = getConfiguredMediaDirs();
+    return res.status(200).json({ mediaDirs });
   }
 
   // POST: Modifier les dossiers MEDIA_DIRS

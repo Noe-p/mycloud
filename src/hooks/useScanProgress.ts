@@ -13,19 +13,20 @@ export function useScanProgress() {
 
     eventSource.onmessage = (event) => {
       try {
-        const data: unknown = event.data;
-        if (typeof data !== 'string') return;
-
-        const state = JSON.parse(data) as ScanState;
+        const data = typeof event.data === 'string' ? event.data : String(event.data);
+        const parsed = JSON.parse(data) as unknown;
 
         // Ignorer le message de connexion initial
         if (
-          'type' in state &&
-          'type' in (state as Record<string, unknown>) &&
-          (state as Record<string, unknown>).type === 'connected'
+          parsed &&
+          typeof parsed === 'object' &&
+          'type' in (parsed as Record<string, unknown>) &&
+          (parsed as Record<string, unknown>).type === 'connected'
         ) {
           return;
         }
+
+        const state = parsed as ScanState;
 
         setScanProgress(state);
 
@@ -42,13 +43,8 @@ export function useScanProgress() {
 
     eventSource.onerror = (error) => {
       console.error('Erreur connexion SSE:', error);
-      // Tenter de reconnecter automatiquement après 5 secondes
-      setTimeout(() => {
-        if (eventSourceRef.current) {
-          eventSourceRef.current.close();
-        }
-        // Le EventSource se reconnecte automatiquement
-      }, 5000);
+      // Ne pas fermer la connexion: EventSource gère la reconnexion automatiquement.
+      // Le serveur envoie aussi 'retry: 5000' pour suggérer un délai de reconnexion.
     };
 
     eventSourceRef.current = eventSource;

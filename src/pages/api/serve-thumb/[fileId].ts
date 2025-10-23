@@ -1,8 +1,6 @@
+import { getThumbPath } from '@/services/api/thumbnail';
 import fs from 'fs';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import path from 'path';
-
-const thumbDir = process.env.THUMB_DIR || path.join(process.cwd(), 'public', 'thumbs');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { fileId } = req.query;
@@ -12,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Construire le chemin du fichier thumb
-  const thumbPath = path.join(thumbDir, `${fileId}.thumb.jpg`);
+  const thumbPath = getThumbPath(fileId);
 
   // Vérifier si le fichier existe
   if (!fs.existsSync(thumbPath)) {

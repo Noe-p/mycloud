@@ -1,82 +1,7 @@
-import crypto from 'crypto';
+import { findFileByFileId, getMediaDirs } from '@/services/api/media';
 import fs from 'fs';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
-
-// Support des dossiers multiples
-const getMediaDirs = (): string[] => {
-  const mediaDirs = process.env.MEDIA_DIRS || process.env.MEDIA_DIR || '';
-  return mediaDirs
-    .split(',')
-    .map((d) => d.trim())
-    .filter(Boolean);
-};
-
-// Fonction pour scanner récursivement tous les fichiers
-function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
-  const files = fs.readdirSync(dirPath);
-
-  files.forEach((file) => {
-    const filePath = path.join(dirPath, file);
-
-    // Exclure les bibliothèques Photos et autres dossiers système
-    if (file.endsWith('.photoslibrary') || file.startsWith('.')) {
-      return;
-    }
-
-    if (fs.statSync(filePath).isDirectory()) {
-      arrayOfFiles = getAllFiles(filePath, arrayOfFiles);
-    } else {
-      arrayOfFiles.push(filePath);
-    }
-  });
-
-  return arrayOfFiles;
-}
-
-// Fonction pour créer un identifiant unique basé sur le chemin et le dossier source
-function getFileId(relativePath: string, sourceDir: string): string {
-  const uniquePath = `${sourceDir}/${relativePath}`;
-  return crypto.createHash('sha256').update(uniquePath).digest('hex').substring(0, 16);
-}
-
-// Cache pour éviter de rescanner à chaque requête
-let fileIdCache: Map<string, string> | null = null;
-let cacheTimestamp = 0;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-function buildFileIdCache(): Map<string, string> {
-  const now = Date.now();
-
-  // Invalider le cache après TTL
-  if (fileIdCache && now - cacheTimestamp < CACHE_TTL) {
-    return fileIdCache;
-  }
-
-  console.log('[media] Rebuilding file ID cache...');
-  const cache = new Map<string, string>();
-  const mediaDirs = getMediaDirs();
-
-  for (const mediaDir of mediaDirs) {
-    if (!fs.existsSync(mediaDir)) {
-      console.warn(`Directory does not exist: ${mediaDir}`);
-      continue;
-    }
-
-    const allFiles = getAllFiles(mediaDir);
-
-    allFiles.forEach((filePath) => {
-      const relativePath = path.relative(mediaDir, filePath);
-      const fileId = getFileId(relativePath, mediaDir);
-      cache.set(fileId, filePath);
-    });
-  }
-
-  fileIdCache = cache;
-  cacheTimestamp = now;
-  console.log(`[media] Cache built with ${cache.size} files`);
-  return cache;
-}
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   const { filename } = req.query;
@@ -91,15 +16,14 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(500).json({ error: 'MEDIA_DIRS not set' });
   }
 
-  // Construire le cache des IDs
-  const cache = buildFileIdCache();
-
   // Chercher le fichier par son ID
-  const filePath = cache.get(filename);
+  const fileInfo = findFileByFileId(filename);
 
-  if (!filePath || !fs.existsSync(filePath)) {
+  if (!fileInfo || !fs.existsSync(fileInfo.filePath)) {
     return res.status(404).json({ error: 'File not found' });
   }
+
+  const { filePath } = fileInfo;
 
   // Vérifier que le fichier appartient à un des dossiers autorisés
   const isInAllowedDir = mediaDirs.some((dir) => filePath.startsWith(dir));
