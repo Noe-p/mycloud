@@ -26,12 +26,12 @@ export const scanAlbums = (dirPath: string, sourceDir: string, basePath: string 
 
         if (stat.isDirectory()) {
           const relativePath = basePath ? path.join(basePath, item) : item;
-          const mediaCount = countMediaInDir(itemPath);
+          const directMediaCount = countMediaInDir(itemPath);
           const subAlbums = scanAlbums(itemPath, sourceDir, relativePath);
 
-          // Compter tous les médias (y compris dans les sous-dossiers)
+          // Compter tous les médias (directs + dans les sous-dossiers)
           const totalMediaCount =
-            mediaCount + subAlbums.reduce((sum, sub) => sum + sub.mediaCount, 0);
+            directMediaCount + subAlbums.reduce((sum, sub) => sum + sub.mediaCount, 0);
 
           if (totalMediaCount > 0) {
             const firstMedia = getFirstMedia(itemPath);
@@ -50,7 +50,7 @@ export const scanAlbums = (dirPath: string, sourceDir: string, basePath: string 
               mediaCount: totalMediaCount,
               subAlbums,
               coverThumb,
-              hasMedia: mediaCount > 0,
+              hasMedia: directMediaCount > 0,
             });
           }
         }
