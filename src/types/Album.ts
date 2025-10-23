@@ -7,3 +7,8 @@ export interface Album {
   coverThumb?: string | undefined;
   hasMedia: boolean;
 }
+
+export interface BreadcrumbItem {
+  name: string;
+  path: string;
+}

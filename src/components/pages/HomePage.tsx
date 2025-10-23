@@ -1,13 +1,13 @@
 'use client';
 
 import { AlbumCard } from '@/components/Albums/AlbumCard';
-import { SpinnerLoader } from '@/components/Loaders/SpinnerLoader';
 import { Layout } from '@/components/utils/Layout';
 import { P16 } from '@/components/utils/Texts';
 import { useAlbumsContext, useAppContext } from '@/contexts';
 import { useScanProgress } from '@/hooks/useScanProgress';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+import { FullPageLoader } from '../Loaders/FullPageLoader';
 
 interface Album {
   id: string;
@@ -82,8 +82,8 @@ export function HomePage(): React.JSX.Element {
 
   if (isLoading) {
     return (
-      <Layout className="md:px-10 px-2">
-        <SpinnerLoader className="mt-22 h-64" />
+      <Layout>
+        <FullPageLoader />
       </Layout>
     );
   }

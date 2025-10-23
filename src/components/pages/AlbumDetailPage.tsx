@@ -1,112 +1,59 @@
 'use client';
 
-import { AlbumCard } from '@/components/Albums/AlbumCard';
-import { Loader } from '@/components/Loaders/Loader';
-import { SpinnerLoader } from '@/components/Loaders/SpinnerLoader';
-import { MediaGrid } from '@/components/Medias/MediaGrid';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+import { AlbumBreadcrumb } from '@/components/Albums/AlbumBreadcrumb';
+import { EmptyAlbumState } from '@/components/Albums/EmptyAlbumState';
+import { SubAlbumsList } from '@/components/Albums/SubAlbumsList';
+import { MediasList } from '@/components/Medias/MediasList';
 import { Col } from '@/components/utils/Flex';
 import { Layout } from '@/components/utils/Layout';
-import { P16 } from '@/components/utils/Texts';
 import { useAppContext } from '@/contexts';
+import { useAlbumData } from '@/hooks/useAlbumData';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
-import { useScanProgress } from '@/hooks/useScanProgress';
-import { Media } from '@/types/Media';
-import { useTranslations } from 'next-intl';
-import Link from 'next/link';
+import { useScanRefresh } from '@/hooks/useScanRefresh';
 import { useParams } from 'next/navigation';
 import React from 'react';
-
-const ITEMS_PER_PAGE = 50;
-
-interface Album {
-  id: string;
-  name: string;
-  relativePath: string;
-  mediaCount: number;
-  subAlbums: Album[];
-  coverThumb?: string | undefined;
-  hasMedia: boolean;
-}
+import { FullPageLoader } from '../Loaders/FullPageLoader';
 
 export function AlbumDetailPage(): React.JSX.Element {
   const params = useParams();
   const albumPath = params?.albumPath as string;
-  const t = useTranslations('common');
   const { setCurrentAlbum } = useAppContext();
-  const { scanProgress } = useScanProgress();
-  const previousScanningRef = React.useRef<boolean>(false);
 
-  const [medias, setMedias] = React.useState<Media[]>([]);
-  const [displayedMedias, setDisplayedMedias] = React.useState<Media[]>([]);
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [isLoadingMore, setIsLoadingMore] = React.useState(false);
-  const [totalCount, setTotalCount] = React.useState(0);
-  const [hasMoreOnServer, setHasMoreOnServer] = React.useState(true);
-  const [albumInfo, setAlbumInfo] = React.useState<Album | null>(null);
-  const [subAlbums, setSubAlbums] = React.useState<Album[]>([]);
-  const [breadcrumbPath, setBreadcrumbPath] = React.useState<Array<{ name: string; path: string }>>(
-    [],
-  );
+  // Charger les données de l'album
+  const {
+    displayedMedias,
+    isLoading,
+    isLoadingMore,
+    totalCount,
+    hasMoreOnServer,
+    albumInfo,
+    subAlbums,
+    breadcrumbPath,
+    hasMore,
+    loadMore,
+    refresh,
+  } = useAlbumData(albumPath);
 
-  // Charger les informations de l'album et ses sous-albums
-  const loadAlbumInfo = React.useCallback(() => {
-    void fetch('/api/albums')
-      .then((res) => res.json())
-      .then((data: { albums: Album[] }) => {
-        // Trouver l'album correspondant dans l'arborescence et construire le chemin
-        const findAlbumWithPath = (
-          albums: Album[],
-          path: string,
-          currentPath: Array<{ name: string; path: string }> = [],
-        ): { album: Album | null; breadcrumb: Array<{ name: string; path: string }> } => {
-          for (const album of albums) {
-            const albumPathToMatch = album.relativePath || album.name;
-            const newPath = [
-              ...currentPath,
-              {
-                name: album.name,
-                path: `/albums/${encodeURIComponent(albumPathToMatch)}`,
-              },
-            ];
+  // Rafraîchir quand le scan se termine
+  useScanRefresh(refresh);
 
-            if (albumPathToMatch === path) {
-              return { album, breadcrumb: newPath };
-            }
+  // Infinite scroll
+  const { observerTarget } = useInfiniteScroll({
+    hasMore,
+    isLoading: isLoadingMore,
+    onLoadMore: loadMore,
+  });
 
-            if (album.subAlbums.length > 0) {
-              const result = findAlbumWithPath(album.subAlbums, path, newPath);
-              if (result.album) return result;
-            }
-          }
-          return { album: null, breadcrumb: [] };
-        };
-
-        const decodedPath = decodeURIComponent(albumPath);
-        const { album, breadcrumb } = findAlbumWithPath(data.albums, decodedPath);
-
-        if (album) {
-          setAlbumInfo(album);
-          setSubAlbums(album.subAlbums);
-          setBreadcrumbPath(breadcrumb);
-        }
-      })
-      .catch((error) => {
-        console.error('Error loading album info:', error);
-      });
-  }, [albumPath]);
-
+  // Mettre à jour le contexte avec les infos de l'album
   React.useEffect(() => {
-    loadAlbumInfo();
-  }, [loadAlbumInfo]);
+    if (albumInfo) {
+      setCurrentAlbum({
+        name: albumInfo.name,
+        mediaCount: totalCount,
+        subAlbumsCount: subAlbums.length,
+      });
+    }
+  }, [albumInfo, totalCount, subAlbums.length, setCurrentAlbum]);
 
   // Réinitialiser l'album actuel quand on quitte la page
   React.useEffect(() => {
@@ -115,181 +62,35 @@ export function AlbumDetailPage(): React.JSX.Element {
     };
   }, [setCurrentAlbum]);
 
-  // Charger les médias de l'album
-  const loadMedias = React.useCallback(() => {
-    setIsLoading(true);
-    void fetch(`/api/albums/${albumPath}?limit=50&offset=0`)
-      .then((res) => res.json())
-      .then(
-        (data: {
-          medias: Media[];
-          total: number;
-          hasMore: boolean;
-          offset: number;
-          limit: number;
-        }) => {
-          setMedias(data.medias);
-          setDisplayedMedias(data.medias.slice(0, ITEMS_PER_PAGE));
-          setTotalCount(data.total);
-          setHasMoreOnServer(data.hasMore);
-          setCurrentPage(1);
-          setIsLoading(false);
-        },
-      )
-      .catch((error) => {
-        console.error('Error loading album medias:', error);
-        setIsLoading(false);
-      });
-  }, [albumPath]);
-
-  React.useEffect(() => {
-    loadMedias();
-  }, [loadMedias]);
-
-  // Rafraîchir les médias et infos de l'album quand le scan se termine
-  React.useEffect(() => {
-    const wasScanning = previousScanningRef.current;
-    const isCurrentlyScanning = scanProgress?.isScanning ?? false;
-
-    // Si on était en train de scanner et que maintenant on ne scanne plus, rafraîchir
-    if (wasScanning && !isCurrentlyScanning && scanProgress?.progress === 100) {
-      console.log('[AlbumDetailPage] Scan terminé, rafraîchissement des médias...');
-      loadMedias();
-      loadAlbumInfo();
-    }
-
-    previousScanningRef.current = isCurrentlyScanning;
-  }, [scanProgress?.isScanning, scanProgress?.progress, loadMedias, loadAlbumInfo]);
-
-  // Mettre à jour le contexte quand on a les infos complètes
-  React.useEffect(() => {
-    if (albumInfo) {
-      setCurrentAlbum({
-        name: albumInfo.name,
-        mediaCount: totalCount, // Nombre de médias directs uniquement
-        subAlbumsCount: subAlbums.length, // Nombre de sous-albums
-      });
-    }
-  }, [albumInfo, totalCount, subAlbums.length, setCurrentAlbum]);
-
-  const hasMore = displayedMedias.length < medias.length || hasMoreOnServer;
-
-  const loadMore = React.useCallback(() => {
-    if (isLoadingMore) return;
-
-    // Charger plus depuis le serveur si nécessaire
-    if (displayedMedias.length >= medias.length && hasMoreOnServer && medias.length > 0) {
-      setIsLoadingMore(true);
-      void fetch(`/api/albums/${albumPath}?limit=50&offset=${medias.length}`)
-        .then((res) => res.json())
-        .then(
-          (data: {
-            medias: Media[];
-            total: number;
-            hasMore: boolean;
-            offset: number;
-            limit: number;
-          }) => {
-            const combined = [...medias, ...data.medias];
-            setMedias(combined);
-            setDisplayedMedias(combined.slice(0, displayedMedias.length + ITEMS_PER_PAGE));
-            setHasMoreOnServer(data.hasMore);
-            setIsLoadingMore(false);
-          },
-        );
-      return;
-    }
-
-    // Afficher plus d'éléments déjà chargés
-    if (displayedMedias.length >= medias.length) return;
-
-    setIsLoadingMore(true);
-    setTimeout(() => {
-      const nextPage = currentPage + 1;
-      const end = nextPage * ITEMS_PER_PAGE;
-      setDisplayedMedias(medias.slice(0, end));
-      setCurrentPage(nextPage);
-      setIsLoadingMore(false);
-    }, 300);
-  }, [currentPage, medias, displayedMedias.length, hasMoreOnServer, isLoadingMore, albumPath]);
-
-  const { observerTarget } = useInfiniteScroll({
-    hasMore,
-    isLoading: isLoadingMore,
-    onLoadMore: loadMore,
-  });
-
   if (isLoading) {
     return (
-      <Layout className="md:px-10 px-2">
-        <SpinnerLoader className="mt-22 h-64" />
+      <Layout>
+        <FullPageLoader />
       </Layout>
     );
   }
 
+  const hasContent = displayedMedias.length > 0 || subAlbums.length > 0;
+
   return (
     <Layout className="md:px-10 px-2">
       <Col className="mt-22 gap-8">
-        {/* Breadcrumb */}
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link href="/">{t('navbar.title')}</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            {breadcrumbPath.map((breadcrumb, index) => (
-              <React.Fragment key={breadcrumb.path}>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  {index === breadcrumbPath.length - 1 ? (
-                    <BreadcrumbPage>{breadcrumb.name}</BreadcrumbPage>
-                  ) : (
-                    <BreadcrumbLink asChild>
-                      <Link href={breadcrumb.path}>{breadcrumb.name}</Link>
-                    </BreadcrumbLink>
-                  )}
-                </BreadcrumbItem>
-              </React.Fragment>
-            ))}
-          </BreadcrumbList>
-        </Breadcrumb>
+        <AlbumBreadcrumb breadcrumbPath={breadcrumbPath} />
 
-        {/* Sub-albums section */}
-        {subAlbums.length > 0 && (
-          <div className="space-y-2">
-            {subAlbums.map((subAlbum) => (
-              <AlbumCard key={subAlbum.id} album={subAlbum} />
-            ))}
-          </div>
+        <SubAlbumsList subAlbums={subAlbums} />
+
+        {displayedMedias.length > 0 && (
+          <MediasList
+            medias={displayedMedias}
+            hasMore={hasMore}
+            hasMoreOnServer={hasMoreOnServer}
+            isLoadingMore={isLoadingMore}
+            totalCount={totalCount}
+            observerTarget={observerTarget}
+          />
         )}
 
-        {/* Media grid section */}
-        {displayedMedias.length > 0 ? (
-          <Col className="gap-4">
-            <MediaGrid medias={displayedMedias} />
-
-            {/* Sentinel for infinite scroll */}
-            <div ref={observerTarget} className="h-20 flex items-center justify-center">
-              {isLoadingMore && <Loader />}
-            </div>
-
-            {/* End message */}
-            {!hasMore && !hasMoreOnServer && (
-              <div className="text-center py-8">
-                <P16 className="text-muted-foreground">
-                  {t('album.allMediasLoaded', { count: totalCount })}
-                </P16>
-              </div>
-            )}
-          </Col>
-        ) : (
-          subAlbums.length === 0 && (
-            <div className="text-center py-12">
-              <P16 className="italic text-muted-foreground">{t('album.noMedia')}</P16>
-            </div>
-          )
-        )}
+        {!hasContent && <EmptyAlbumState />}
       </Col>
     </Layout>
   );

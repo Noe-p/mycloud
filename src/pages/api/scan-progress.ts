@@ -20,7 +20,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   // Envoyer un message de connexion réussie
   res.write(`data: ${JSON.stringify({ type: 'connected', clientId })}\n\n`);
   // Suggérer un délai de reconnexion côté client (EventSource le supporte)
-  res.write(`retry: 5000\n\n`);
+  res.write('retry: 5000\n\n');
 
   // Envoyer l'état actuel du scan s'il existe
   try {
