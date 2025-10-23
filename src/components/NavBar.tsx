@@ -193,8 +193,10 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
               {scanProgress && scanProgress.isScanning && (
                 <div className="w-full mb-4">
                   <div className="flex items-center justify-between pb-2 text-xs">
-                    <P14>{tCommons('home.scanningInProgress')}</P14>
-                    <P12>{`${scanProgress.scanned}/${scanProgress.total}`}</P12>
+                    <P14 className="text-muted-foreground">
+                      {tCommons('home.scanningInProgress')}
+                    </P14>
+                    <P12 className="text-muted-foreground">{`${scanProgress.scanned}/${scanProgress.total}`}</P12>
                   </div>
                   <Progress value={scanProgress.progress} className="h-1" />
                 </div>
