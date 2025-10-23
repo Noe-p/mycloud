@@ -42,10 +42,18 @@ function getFileId(relativePath: string, sourceDir: string): string {
 
 // Cache pour éviter de rescanner à chaque requête
 let fileIdCache: Map<string, string> | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 function buildFileIdCache(): Map<string, string> {
-  if (fileIdCache) return fileIdCache;
+  const now = Date.now();
+  
+  // Invalider le cache après TTL
+  if (fileIdCache && now - cacheTimestamp < CACHE_TTL) {
+    return fileIdCache;
+  }
 
+  console.log('[media] Rebuilding file ID cache...');
   const cache = new Map<string, string>();
   const mediaDirs = getMediaDirs();
 
@@ -65,6 +73,8 @@ function buildFileIdCache(): Map<string, string> {
   }
 
   fileIdCache = cache;
+  cacheTimestamp = now;
+  console.log(`[media] Cache built with ${cache.size} files`);
   return cache;
 }
 
@@ -113,9 +123,33 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   };
 
   const contentType = mimeTypes[ext] || 'application/octet-stream';
-  res.setHeader('Content-Type', contentType);
+  const stat = fs.statSync(filePath);
 
-  // Streamer le fichier
-  const fileStream = fs.createReadStream(filePath);
-  fileStream.pipe(res);
+  // Headers pour supporter le streaming vidéo avec range requests
+  res.setHeader('Content-Type', contentType);
+  res.setHeader('Content-Length', stat.size);
+  res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+
+  // Gérer les range requests (nécessaire pour le seeking dans les vidéos)
+  const range = req.headers.range;
+  
+  if (range) {
+    const parts = range.replace(/bytes=/, '').split('-');
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
+    const chunksize = end - start + 1;
+
+    res.writeHead(206, {
+      'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+      'Content-Length': chunksize,
+    });
+
+    const stream = fs.createReadStream(filePath, { start, end });
+    stream.pipe(res);
+  } else {
+    // Streamer le fichier complet
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+  }
 }
