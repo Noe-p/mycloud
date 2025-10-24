@@ -1,4 +1,4 @@
-import { getMediaDirs, isImage, isVideo } from '@/services/api/media';
+import { getMediaDirs, isImage, isVideo, rebuildFileCache } from '@/services/api/media';
 import {
   buildValidFileIdsSet,
   cleanOrphanThumbs,
@@ -60,6 +60,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Scanner tous les fichiers médias
     const allMediaFiles = scanMediaFiles(mediaDirs);
+
+    // Reconstruire le cache de fileIds
+    rebuildFileCache(allMediaFiles);
 
     // Construire le Set des fileIds valides
     const validFileIds = buildValidFileIdsSet(allMediaFiles);

@@ -38,20 +38,89 @@ export const generateImageThumb = async (srcPath: string, destPath: string): Pro
     fs.mkdirSync(destDir, { recursive: true });
   }
 
-  // Pour les images HEIC, utiliser ffmpeg (portable et dispo dans Docker)
+  // Pour les images HEIC, privilégier heif-convert (libheif) pour qualité/couleur complètes
   if (isHeic(srcPath)) {
-    return new Promise((resolve, reject) => {
-      // Crop en carré 300x300 centré
-      const cmd = `ffmpeg -y -i "${srcPath}" -vf "scale=300:300:force_original_aspect_ratio=increase,crop=300:300" "${destPath}"`;
-      exec(cmd, (error) => {
+    // Répertoire temporaire pour conversion HEIC -> JPEG pleine résolution
+    const tempDir = path.join(process.cwd(), 'public', 'temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    const base = path.basename(srcPath, path.extname(srcPath));
+    const tempJpeg = path.join(tempDir, `${base}-${Date.now()}.jpg`);
+
+    // 1) heif-convert (production via libheif-examples)
+    try {
+      await execPromise(`heif-convert -q 90 "${srcPath}" "${tempJpeg}"`);
+
+      // Créer un fond flouté (cover) et poser l'image entière (inside) au centre pour éviter les bandes
+      const background = await sharp(tempJpeg)
+        .rotate()
+        .resize(300, 300, { fit: 'cover', position: 'center' })
+        .blur(20)
+        .toBuffer();
+
+      const foreground = await sharp(tempJpeg)
+        .rotate()
+        .resize(300, 300, { fit: 'inside', withoutEnlargement: false })
+        .toBuffer();
+
+      await sharp(background)
+        .composite([{ input: foreground, gravity: 'center' }])
+        .jpeg({ quality: 82 })
+        .toFile(destPath);
+
+      try {
+        fs.unlinkSync(tempJpeg);
+      } catch {
+        // Ignorer les erreurs de suppression
+      }
+      console.log('Thumb HEIC généré (heif-convert + blurred background):', destPath);
+      return;
+    } catch (heifErr) {
+      console.warn('heif-convert indisponible/échec, fallback ffmpeg:', heifErr);
+    }
+
+    // 2) Fallback ffmpeg: convertir en JPEG temporaire puis appliquer le même compositing (fond flouté)
+    const tempFfmpegJpeg = path.join(tempDir, `${base}-${Date.now()}-ff.jpg`);
+    await new Promise<void>((resolve, reject) => {
+      const cmd = `ffmpeg -y -i "${srcPath}" -map 0:v:0 -pix_fmt yuvj420p -q:v 2 "${tempFfmpegJpeg}"`;
+      exec(cmd, (error, _stdout, stderr) => {
         if (error) {
+          console.error(`Erreur ffmpeg pour ${srcPath}:`, stderr);
           reject(error);
         } else {
-          console.log('Thumb HEIC généré:', destPath);
           resolve();
         }
       });
     });
+
+    try {
+      const background = await sharp(tempFfmpegJpeg)
+        .rotate()
+        .resize(300, 300, { fit: 'cover', position: 'center' })
+        .blur(20)
+        .toBuffer();
+
+      const foreground = await sharp(tempFfmpegJpeg)
+        .rotate()
+        .resize(300, 300, { fit: 'inside', withoutEnlargement: false })
+        .toBuffer();
+
+      await sharp(background)
+        .composite([{ input: foreground, gravity: 'center' }])
+        .jpeg({ quality: 82 })
+        .toFile(destPath);
+    } finally {
+      try {
+        fs.unlinkSync(tempFfmpegJpeg);
+      } catch {
+        // Ignorer les erreurs de suppression
+      }
+    }
+
+    console.log('Thumb HEIC généré (ffmpeg + blurred background):', destPath);
+    return;
   }
 
   // Pour les autres images - rotate() pour EXIF, resize + crop en carré 300x300
@@ -124,5 +193,15 @@ export const getThumbPath = (fileId: string): string => {
  * Obtient l'URL publique d'un thumbnail
  */
 export const getThumbUrl = (fileId: string): string => {
+  // Append a version query based on the thumbnail file mtime to bust immutable caches
+  try {
+    const p = getThumbPath(fileId);
+    if (fs.existsSync(p)) {
+      const mtime = Math.floor(fs.statSync(p).mtimeMs);
+      return `/api/serve-thumb/${fileId}?v=${mtime}`;
+    }
+  } catch {
+    // ignore FS errors and fall back
+  }
   return `/api/serve-thumb/${fileId}`;
 };

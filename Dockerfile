@@ -36,11 +36,21 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     libimage-exiftool-perl \
+    libheif-examples \
+    libheif1 \
+    libde265-0 \
     && rm -rf /var/lib/apt/lists/*
-# copier uniquement l’artefact standalone et les fichiers publics
+
+# Créer les répertoires nécessaires pour les caches et fichiers temporaires
+RUN mkdir -p ./standalone/public/temp && \
+    mkdir -p ./standalone/public/thumbs && \
+    mkdir -p ./standalone/data
+
+# copier uniquement l'artefact standalone et les fichiers publics
 COPY --from=builder /home/app/.next/standalone ./standalone
 COPY --from=builder /home/app/public ./standalone/public
 COPY --from=builder /home/app/.next/static ./standalone/.next/static
+
 EXPOSE 3000
 ENV PORT=3000
 CMD ["node", "./standalone/server.js"]

@@ -148,6 +148,7 @@ export function ImagesFullScreen({
                 quality={90}
                 onLoad={() => setIsLoading(false)}
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
+                unoptimized={true}
               />
             )}
           </div>

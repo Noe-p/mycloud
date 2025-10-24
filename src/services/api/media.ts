@@ -18,6 +18,78 @@ export const getThumbDir = (): string => {
 };
 
 /**
+ * Cache des fileIds pour éviter de rescanner tous les fichiers à chaque requête
+ */
+const FILE_CACHE_PATH = path.join(process.cwd(), 'public', 'file-cache.json');
+let fileCache: Map<string, { filePath: string; sourceDir: string }> | null = null;
+
+/**
+ * Charge le cache des fichiers
+ */
+export const loadFileCache = (): void => {
+  try {
+    if (fs.existsSync(FILE_CACHE_PATH)) {
+      const data: Record<string, { filePath: string; sourceDir: string }> = JSON.parse(
+        fs.readFileSync(FILE_CACHE_PATH, 'utf-8'),
+      );
+      fileCache = new Map(Object.entries(data));
+      console.log(`Cache de fichiers chargé: ${fileCache.size} fichiers`);
+    } else {
+      fileCache = new Map();
+      console.log("Aucun cache de fichiers trouvé, création d'un nouveau cache");
+    }
+  } catch (error) {
+    console.error('Erreur lors du chargement du cache de fichiers:', error);
+    fileCache = new Map();
+  }
+};
+
+/**
+ * Sauvegarde le cache des fichiers
+ */
+export const saveFileCache = (): void => {
+  try {
+    if (!fileCache) return;
+    const data: Record<string, { filePath: string; sourceDir: string }> = {};
+    fileCache.forEach((value, key) => {
+      data[key] = value;
+    });
+    fs.writeFileSync(FILE_CACHE_PATH, JSON.stringify(data, null, 2));
+    console.log(`Cache de fichiers sauvegardé: ${fileCache.size} fichiers`);
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde du cache de fichiers:', error);
+  }
+};
+
+/**
+ * Met à jour le cache avec un nouveau fichier
+ */
+export const updateFileCacheEntry = (fileId: string, filePath: string, sourceDir: string): void => {
+  if (!fileCache) {
+    loadFileCache();
+  }
+  fileCache!.set(fileId, { filePath, sourceDir });
+};
+
+/**
+ * Reconstruit tout le cache à partir des fichiers médias
+ */
+export const rebuildFileCache = (
+  mediaFiles: Array<{ filePath: string; sourceDir: string }>,
+): void => {
+  fileCache = new Map();
+  for (const { filePath, sourceDir } of mediaFiles) {
+    const relativePath = path.relative(sourceDir, filePath);
+    const fileId = getFileId(relativePath, sourceDir);
+    fileCache.set(fileId, { filePath, sourceDir });
+  }
+  saveFileCache();
+};
+
+// Charger le cache au démarrage
+loadFileCache();
+
+/**
  * Extensions de fichiers supportées
  */
 export const IMAGE_EXTENSIONS = /\.(jpg|jpeg|png|gif|heic)$/i;
@@ -153,11 +225,24 @@ export const getFirstMedia = (dirPath: string): string | null => {
 
 /**
  * Trouve un fichier par son fileId dans tous les dossiers médias
+ * Utilise le cache pour éviter de scanner tous les fichiers à chaque requête
  * @returns { filePath, sourceDir } ou null
  */
 export const findFileByFileId = (
   fileId: string,
 ): { filePath: string; sourceDir: string } | null => {
+  // Vérifier d'abord dans le cache
+  if (!fileCache) {
+    loadFileCache();
+  }
+
+  const cached = fileCache!.get(fileId);
+  if (cached && fs.existsSync(cached.filePath)) {
+    return cached;
+  }
+
+  // Si pas dans le cache ou fichier n'existe plus, scanner (fallback)
+  console.warn(`FileId ${fileId} non trouvé dans le cache, scan en cours...`);
   const mediaDirs = getMediaDirs();
 
   for (const mediaDir of mediaDirs) {
@@ -173,10 +258,14 @@ export const findFileByFileId = (
       const currentFileId = getFileId(relativePath, mediaDir);
 
       if (currentFileId === fileId) {
+        // Mettre à jour le cache
+        updateFileCacheEntry(fileId, filePath, mediaDir);
+        saveFileCache();
         return { filePath, sourceDir: mediaDir };
       }
     }
   }
 
+  console.error(`FileId ${fileId} non trouvé après scan complet`);
   return null;
 };

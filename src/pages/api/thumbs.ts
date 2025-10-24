@@ -1,4 +1,9 @@
-import { isVideo as checkIsVideo, getFileId, getMediaDirs } from '@/services/api/media';
+import {
+  isVideo as checkIsVideo,
+  getFileId,
+  getMediaDirs,
+  rebuildFileCache,
+} from '@/services/api/media';
 import { scanMediaFiles } from '@/services/api/scanner';
 import { getThumbPath, getVideoDuration } from '@/services/api/thumbnail';
 import fs from 'fs';
@@ -20,6 +25,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Scanner récursivement tous les fichiers médias
   const allMediaFiles = scanMediaFiles(mediaDirs);
+
+  // Reconstruire le cache de fileIds
+  rebuildFileCache(allMediaFiles);
 
   console.log(
     `[thumbs] ${allMediaFiles.length} fichiers médias trouvés en ${Date.now() - startTime}ms`,

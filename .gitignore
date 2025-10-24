@@ -7,9 +7,11 @@
 .env
 .env.production
 /public/thumbs
+/public/temp
 /public/scan.lock
 /public/scan-state.json
 /public/exif-cache.json
+/public/file-cache.json
 
 # database
 /data
