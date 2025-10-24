@@ -33,23 +33,6 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
   const { handleScan, loading } = useScan();
   const { scanProgress } = useScanProgress();
   const [open, setOpen] = React.useState(false);
-  const [mediaDirs, setMediaDirs] = React.useState<string[]>([]);
-
-  // Charger les dossiers actuels au montage
-  React.useEffect(() => {
-    const loadCurrentFolders = async () => {
-      try {
-        const res = await fetch('/api/media-dir');
-        const data = await res.json();
-        if (data.mediaDirs && Array.isArray(data.mediaDirs)) {
-          setMediaDirs(data.mediaDirs as string[]);
-        }
-      } catch (error) {
-        console.error('Error loading current folders:', error);
-      }
-    };
-    void loadCurrentFolders();
-  }, []);
 
   const onScan = async () => {
     await handleScan();
@@ -109,30 +92,6 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
             <DrawerTitle className="sr-only">
               {tCommons('navbar.menu.title', { defaultValue: 'Menu' })}
             </DrawerTitle>
-            <div className="px-4 pb-4 pt-10 space-y-6">
-              {/* Liste des dossiers actuels */}
-              <div className="space-y-2">
-                <P12 className="font-medium text-muted-foreground">
-                  {tCommons('navbar.menu.currentFolders')}
-                </P12>
-                {mediaDirs.length === 0 ? (
-                  <P12 className="text-muted-foreground italic">
-                    {tCommons('navbar.menu.noFolders')}
-                  </P12>
-                ) : (
-                  <div className="space-y-2">
-                    {mediaDirs.map((dir, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between gap-2 p-2 rounded-md bg-secondary/50 border border-border"
-                      >
-                        <P12 className="truncate text-foreground flex-1">{dir}</P12>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
             <DrawerFooter>
               {/* Barre de progression du scan */}
               {scanProgress && scanProgress.isScanning && (
@@ -152,7 +111,7 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
                 onClick={() => {
                   void onScan();
                 }}
-                disabled={loading || mediaDirs.length === 0 || (scanProgress?.isScanning ?? false)}
+                disabled={loading || (scanProgress?.isScanning ?? false)}
                 isLoading={loading || (scanProgress?.isScanning ?? false)}
                 className="w-full justify-start"
                 variant="default"
