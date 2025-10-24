@@ -2,6 +2,14 @@
 # 1 – Installer les dépendances avec Bun
 FROM oven/bun:1 AS dependencies
 WORKDIR /home/app
+
+# Installer Python et les outils de build nécessaires pour node-gyp
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
 # copier lockfile Bun + package.json pour un install reproductible
 COPY package.json bun.lockb ./
 RUN bun install --frozen-lockfile
