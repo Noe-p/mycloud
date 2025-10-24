@@ -16,7 +16,7 @@ RUN bun install --frozen-lockfile
 
 
 # 2 – Builder votre app Next.js
-FROM node:18-slim AS builder
+FROM node:24-slim AS builder
 WORKDIR /home/app
 # réutiliser les node_modules installés
 COPY --from=dependencies /home/app/node_modules ./node_modules
@@ -30,7 +30,7 @@ RUN npm run build
 
 
 # 3 – Image de runtime légère
-FROM node:18-slim AS runner
+FROM node:24-slim AS runner
 WORKDIR /home/app
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN apt-get update && apt-get install -y \
