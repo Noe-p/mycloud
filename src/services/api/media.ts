@@ -92,6 +92,9 @@ export const countMediaInDir = (dirPath: string): number => {
   try {
     const files = fs.readdirSync(dirPath);
     return files.filter((file) => {
+      // Ignorer les fichiers cachés et métadonnées macOS
+      if (file.startsWith('.')) return false;
+
       const filePath = path.join(dirPath, file);
       try {
         if (fs.statSync(filePath).isDirectory()) return false;
@@ -114,6 +117,9 @@ export const getFirstMedia = (dirPath: string): string | null => {
 
     // Chercher d'abord dans le dossier actuel
     for (const file of files) {
+      // Ignorer les fichiers cachés et métadonnées macOS
+      if (file.startsWith('.')) continue;
+
       const filePath = path.join(dirPath, file);
       try {
         if (fs.statSync(filePath).isDirectory()) continue;

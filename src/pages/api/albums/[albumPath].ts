@@ -42,6 +42,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const mediaFiles = files
       .filter((file) => {
+        // Ignorer les fichiers cachés et métadonnées macOS
+        if (file.startsWith('.')) return false;
+
         const filePath = path.join(targetDir, file);
         try {
           if (fs.statSync(filePath).isDirectory()) return false;
