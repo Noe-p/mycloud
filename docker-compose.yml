@@ -13,12 +13,14 @@ services:
       - PORT=3000
       - NEXT_PUBLIC_APP_URL=https://noephilippe.ddns.net:3000
       - MEDIA_DIRS=/media/photos
-      - THUMB_DIR=/app/public/thumbs
+      - THUMB_DIR=/home/app/standalone/public/thumbs
     volumes:
       # Montage des répertoires de médias en lecture seule
       - /mnt/ssd/Photos:/media/photos:ro
       # Montage du répertoire des miniatures pour persister les données
-      - thumbs-data:/app/public/thumbs
+      - thumbs-data:/home/app/standalone/public/thumbs
+      # Persister la base utilisateurs SQLite
+      - users-data:/home/app/data
     networks:
       - mycloud-network
     healthcheck:
@@ -31,6 +33,8 @@ services:
 
 volumes:
   thumbs-data:
+    driver: local
+  users-data:
     driver: local
 
 networks:
