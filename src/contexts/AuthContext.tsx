@@ -14,12 +14,15 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
 
   useEffect(() => {
     // Vérifier si l'utilisateur a un token
-    const verifyToken = async () => {
+    const verifyToken = async (): Promise<void> => {
       const token = localStorage.getItem('auth_token');
       if (token) {
         try {
           const response = await fetch(`/api/auth/verify?token=${token}`);
-          const data = await response.json();
+          const data = (await response.json()) as {
+            success: boolean;
+            user?: { username: string; createdAt: string };
+          };
 
           if (data.success && data.user) {
             setUser({
@@ -47,7 +50,12 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         body: JSON.stringify(credentials),
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as {
+        success: boolean;
+        user?: { username: string; createdAt: string };
+        token?: string;
+        error?: string;
+      };
 
       if (data.success && data.user && data.token) {
         const user: User = {
@@ -61,7 +69,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         return { success: true, user };
       }
 
-      return { success: false, error: data.error || 'Login failed' };
+      return { success: false, error: data.error ?? 'Login failed' };
     } catch {
       return { success: false, error: 'Login error' };
     }
@@ -75,7 +83,12 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         body: JSON.stringify(credentials),
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as {
+        success: boolean;
+        user?: { username: string; createdAt: string };
+        token?: string;
+        error?: string;
+      };
 
       if (data.success && data.user && data.token) {
         const user: User = {
@@ -89,24 +102,22 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         return { success: true, user };
       }
 
-      return { success: false, error: data.error || 'Registration failed' };
+      return { success: false, error: data.error ?? 'Registration failed' };
     } catch {
       return { success: false, error: 'Registration error' };
     }
   };
 
-  const logout = async () => {
+  const logout = (): void => {
     const token = localStorage.getItem('auth_token');
     if (token) {
-      try {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token }),
-        });
-      } catch {
+      void fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      }).catch(() => {
         // Ignore l'erreur, on supprime quand même le token localement
-      }
+      });
     }
 
     setUser(null);

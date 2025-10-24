@@ -22,6 +22,7 @@ export function getServerTranslation(req: NextApiRequest, key: string): string {
   const keys = key.split('.');
 
   // Commencer avec 'common' par défaut
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let value: any = messages[locale].common;
 
   for (const k of keys) {
