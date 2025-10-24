@@ -64,7 +64,7 @@ export function AlbumDetailPage(): React.JSX.Element {
 
   if (isLoading) {
     return (
-      <Layout>
+      <Layout isProtected>
         <FullPageLoader />
       </Layout>
     );
@@ -73,7 +73,7 @@ export function AlbumDetailPage(): React.JSX.Element {
   const hasContent = displayedMedias.length > 0 || subAlbums.length > 0;
 
   return (
-    <Layout className="md:px-10 px-2">
+    <Layout className="md:px-10 px-2" isProtected>
       <Col className="mt-22 gap-8">
         <AlbumBreadcrumb breadcrumbPath={breadcrumbPath} />
 

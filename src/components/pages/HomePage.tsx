@@ -82,14 +82,14 @@ export function HomePage(): React.JSX.Element {
 
   if (isLoading) {
     return (
-      <Layout>
+      <Layout isProtected>
         <FullPageLoader />
       </Layout>
     );
   }
 
   return (
-    <Layout className="md:px-10 px-2">
+    <Layout className="md:px-10 px-2" isProtected>
       <div className="mt-22">
         {albums.length == 0 ? (
           <div className="text-center py-12">

@@ -9,8 +9,13 @@ export function FullPageLoader(props: LoaderProps): React.JSX.Element {
   const { className } = props;
 
   return (
-    <div className={cn('flex justify-center items-center min-h-screen w-full', className)}>
-      <Loader2 className="h-8 w-8 animate-spin text-foreground" />
+    <div
+      className={cn(
+        'bg-background flex justify-center items-center min-h-screen w-full',
+        className,
+      )}
+    >
+      <Loader2 className="h-8 w-8 animate-spin text-foreground/60" />
     </div>
   );
 }

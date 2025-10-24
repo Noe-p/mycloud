@@ -4,10 +4,10 @@ import { Col, Row } from '@/components/utils/Flex';
 import { cn } from '@/services/utils';
 import { useTranslations } from 'next-intl';
 
-import { useAlbumsContext, useAppContext, useMediaContext } from '@/contexts';
+import { useAlbumsContext, useAppContext, useAuth, useMediaContext } from '@/contexts';
 import { useScan } from '@/hooks/useScan';
 import { useScanProgress } from '@/hooks/useScanProgress';
-import { MoreVertical, Scan } from 'lucide-react';
+import { LogOut, MoreVertical, Scan } from 'lucide-react';
 import React from 'react';
 import { Button } from './ui/button';
 import {
@@ -32,10 +32,16 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
   const { albumCounts } = useAlbumsContext();
   const { handleScan, loading } = useScan();
   const { scanProgress } = useScanProgress();
+  const { logout, user } = useAuth();
   const [open, setOpen] = React.useState(false);
 
   const onScan = async () => {
     await handleScan();
+  };
+
+  const handleLogout = () => {
+    logout();
+    setOpen(false);
   };
 
   return (
@@ -121,6 +127,15 @@ export function NavBar({ className }: NavBarProps): React.JSX.Element {
                   ? tCommons('navbar.menu.scanning')
                   : tCommons('navbar.menu.scan')}
               </Button>
+
+              {/* Bouton de déconnexion */}
+              {user && (
+                <Button onClick={handleLogout} className="w-full justify-start" variant="outline">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  {tCommons('generics.logout')}
+                </Button>
+              )}
+
               <DrawerClose asChild>
                 <Button variant="outline">{tCommons('generics.close')}</Button>
               </DrawerClose>

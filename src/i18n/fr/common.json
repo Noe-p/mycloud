@@ -3,7 +3,33 @@
   "generics": {
     "privacyPolicy": "Politique de confidentialité",
     "close": "Fermer",
-    "noAlbum": "Aucun album trouvé"
+    "noAlbum": "Aucun album trouvé",
+    "logout": "Déconnexion"
+  },
+  "auth": {
+    "login": "Connexion",
+    "register": "Inscription",
+    "username": "Pseudo",
+    "password": "Mot de passe",
+    "loginButton": "Se connecter",
+    "registerButton": "S'inscrire",
+    "noAccount": "Pas encore de compte ?",
+    "hasAccount": "Déjà un compte ?",
+    "switchToRegister": "Créer un compte",
+    "switchToLogin": "Se connecter",
+    "loginError": "Pseudo ou mot de passe incorrect",
+    "registerError": "Erreur lors de l'inscription",
+    "usernameTaken": "Ce pseudo est déjà utilisé",
+    "usernameRequired": "Le pseudo est requis",
+    "passwordRequired": "Le mot de passe est requis",
+    "passwordTooShort": "Le mot de passe doit contenir au moins 6 caractères",
+    "welcome": "Bienvenue",
+    "loginSuccess": "Connexion réussie",
+    "registerSuccess": "Inscription réussie",
+    "invalidCredentials": "Identifiants invalides",
+    "sessionExpired": "Session expirée",
+    "unauthorized": "Non autorisé",
+    "userAlreadyExists": "Un utilisateur existe déjà. Veuillez vous connecter."
   },
   "album": {
     "media": "média",

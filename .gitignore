@@ -11,6 +11,12 @@
 /public/scan-state.json
 /public/exif-cache.json
 
+# database
+/data
+*.db
+*.db-shm
+*.db-wal
+
 # testing
 /coverage
 
