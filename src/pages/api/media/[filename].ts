@@ -84,6 +84,15 @@ const convertHeicToJpeg = async (
   // Note: heif-convert applique automatiquement l'orientation EXIF
   try {
     await execPromise(`heif-convert -q 92 '${heicPath}' '${tempJpegPath}'`);
+    // Forcer l'orientation EXIF à 1 (normal) sur le JPEG généré
+    try {
+      await execPromise(`exiftool -overwrite_original -Orientation=1 '${tempJpegPath}'`);
+    } catch (exifErr) {
+      console.warn(
+        '[API /media] exiftool non disponible ou erreur, orientation non forcée:',
+        exifErr,
+      );
+    }
     console.log('[API /media] HEIC converti en JPEG avec heif-convert:', tempJpegPath);
     pruneTempFiles(tempJpegPath, fileId, heicBase);
     return tempJpegPath;

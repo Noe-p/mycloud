@@ -53,6 +53,12 @@ export const generateImageThumb = async (srcPath: string, destPath: string): Pro
     // Note: heif-convert applique automatiquement l'orientation EXIF
     try {
       await execPromise(`heif-convert -q 90 "${srcPath}" "${tempJpeg}"`);
+      // Forcer l'orientation EXIF à 1 (normal) sur le JPEG généré
+      try {
+        await execPromise(`exiftool -overwrite_original -Orientation=1 "${tempJpeg}"`);
+      } catch (exifErr) {
+        console.warn('exiftool non disponible ou erreur, orientation non forcée:', exifErr);
+      }
 
       const foreground = await sharp(tempJpeg)
         .resize(300, 300, { fit: 'inside', withoutEnlargement: false })
