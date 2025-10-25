@@ -21,3 +21,12 @@ public/exif-cache.json
 /public/scan-state.json
 /public/exif-cache.json
 /public/file-cache.json
+
+# Editors
+.vscode
+.idea
+
+# Additional build artifacts
+out
+standalone
+dist

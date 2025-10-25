@@ -1,4 +1,5 @@
 
+# syntax=docker/dockerfile:1.6
 # 1 – Installer les dépendances avec Bun
 FROM oven/bun:1 AS dependencies
 WORKDIR /home/app
@@ -26,7 +27,7 @@ ARG NODE_ENV=production
 ENV NODE_ENV=$NODE_ENV
 ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
-RUN npm run build
+RUN --mount=type=cache,target=/home/app/.next/cache npm run build
 
 
 # 3 – Image de runtime légère
