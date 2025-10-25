@@ -94,38 +94,114 @@ export const scanMediaFiles = (
 
 /**
  * Supprime les thumbnails orphelins (dont le média source n'existe plus)
+ * et nettoie les caches et fichiers temporaires
  */
 export const cleanOrphanThumbs = (validFileIds: Set<string>): number => {
   const thumbDir = getThumbDir();
   let deletedCount = 0;
 
-  if (!fs.existsSync(thumbDir)) {
-    return 0;
-  }
+  // 1. Nettoyer les thumbnails orphelins
+  if (fs.existsSync(thumbDir)) {
+    try {
+      const thumbFiles = fs.readdirSync(thumbDir);
 
-  try {
-    const thumbFiles = fs.readdirSync(thumbDir);
+      for (const thumbFile of thumbFiles) {
+        if (thumbFile.endsWith('.thumb.jpg')) {
+          // Extraire le fileId du nom du thumb
+          const fileId = thumbFile.replace('.thumb.jpg', '');
 
-    for (const thumbFile of thumbFiles) {
-      if (thumbFile.endsWith('.thumb.jpg')) {
-        // Extraire le fileId du nom du thumb
-        const fileId = thumbFile.replace('.thumb.jpg', '');
-
-        // Si le fileId n'existe pas dans les médias valides, supprimer le thumb
-        if (!validFileIds.has(fileId)) {
-          const thumbPath = path.join(thumbDir, thumbFile);
-          try {
-            fs.unlinkSync(thumbPath);
-            deletedCount++;
-            console.log('Thumb orphelin supprimé:', thumbFile);
-          } catch (e) {
-            console.error('Erreur suppression thumb orphelin', thumbFile, ':', e);
+          // Si le fileId n'existe pas dans les médias valides, supprimer le thumb
+          if (!validFileIds.has(fileId)) {
+            const thumbPath = path.join(thumbDir, thumbFile);
+            try {
+              fs.unlinkSync(thumbPath);
+              deletedCount++;
+              console.log('Thumb orphelin supprimé:', thumbFile);
+            } catch (e) {
+              console.error('Erreur suppression thumb orphelin', thumbFile, ':', e);
+            }
           }
         }
       }
+    } catch (e) {
+      console.error('Erreur nettoyage thumbs orphelins:', e);
     }
-  } catch (e) {
-    console.error('Erreur nettoyage thumbs orphelins:', e);
+  }
+
+  // 2. Nettoyer le dossier temp
+  const tempDir = path.join(process.cwd(), 'public', 'temp');
+  if (fs.existsSync(tempDir)) {
+    try {
+      const tempFiles = fs.readdirSync(tempDir);
+      for (const tempFile of tempFiles) {
+        const tempPath = path.join(tempDir, tempFile);
+        try {
+          if (fs.statSync(tempPath).isFile()) {
+            fs.unlinkSync(tempPath);
+            deletedCount++;
+            console.log('Fichier temporaire supprimé:', tempFile);
+          }
+        } catch (e) {
+          console.error('Erreur suppression fichier temporaire', tempFile, ':', e);
+        }
+      }
+    } catch (e) {
+      console.error('Erreur nettoyage dossier temp:', e);
+    }
+  }
+
+  // 3. Nettoyer le cache EXIF
+  const exifCachePath = path.join(process.cwd(), 'public', 'exif-cache.json');
+  if (fs.existsSync(exifCachePath)) {
+    try {
+      const exifData: Record<string, string> = JSON.parse(fs.readFileSync(exifCachePath, 'utf-8'));
+      const cleanedExifData: Record<string, string> = {};
+      let exifEntriesRemoved = 0;
+
+      Object.entries(exifData).forEach(([filePath, date]) => {
+        if (fs.existsSync(filePath)) {
+          cleanedExifData[filePath] = date;
+        } else {
+          exifEntriesRemoved++;
+          console.log('Entrée EXIF orpheline supprimée:', filePath);
+        }
+      });
+
+      if (exifEntriesRemoved > 0) {
+        fs.writeFileSync(exifCachePath, JSON.stringify(cleanedExifData, null, 2));
+        console.log(`${exifEntriesRemoved} entrées EXIF orphelines supprimées`);
+      }
+    } catch (e) {
+      console.error('Erreur nettoyage cache EXIF:', e);
+    }
+  }
+
+  // 4. Nettoyer le cache de fichiers
+  const fileCachePath = path.join(process.cwd(), 'public', 'file-cache.json');
+  if (fs.existsSync(fileCachePath)) {
+    try {
+      const fileData: Record<string, { filePath: string; sourceDir: string }> = JSON.parse(
+        fs.readFileSync(fileCachePath, 'utf-8'),
+      );
+      const cleanedFileData: Record<string, { filePath: string; sourceDir: string }> = {};
+      let fileEntriesRemoved = 0;
+
+      Object.entries(fileData).forEach(([fileId, { filePath, sourceDir }]) => {
+        if (validFileIds.has(fileId) && fs.existsSync(filePath)) {
+          cleanedFileData[fileId] = { filePath, sourceDir };
+        } else {
+          fileEntriesRemoved++;
+          console.log('Entrée cache fichier orpheline supprimée:', fileId, filePath);
+        }
+      });
+
+      if (fileEntriesRemoved > 0) {
+        fs.writeFileSync(fileCachePath, JSON.stringify(cleanedFileData, null, 2));
+        console.log(`${fileEntriesRemoved} entrées cache fichier orphelines supprimées`);
+      }
+    } catch (e) {
+      console.error('Erreur nettoyage cache fichiers:', e);
+    }
   }
 
   return deletedCount;

@@ -20,7 +20,7 @@ services:
       # Montage du répertoire des miniatures pour persister les données
       - thumbs-data:/home/app/standalone/public/thumbs
       # Persister la base utilisateurs SQLite
-      - users-data:/home/app/data
+      - users-data:/home/app/standalone/data
     networks:
       - mycloud-network
     healthcheck:
