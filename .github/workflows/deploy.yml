@@ -42,11 +42,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build & push multi-arch image
+      - name: Build & push image (arm64)
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64
+          platforms: linux/arm64
           push: true
           tags: ${{ env.GHCR_REGISTRY }}/${{ steps.meta.outputs.owner_lc }}/mycloud:${{ steps.meta.outputs.short_sha }}
           build-args: |

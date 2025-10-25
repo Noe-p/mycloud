@@ -1,9 +1,8 @@
-version: '3.8'
-
 services:
   app:
     image: ${GHCR_REGISTRY}/${OWNER_LC}/mycloud:${SHA}
     container_name: mycloud-app
+    platform: linux/arm64
     restart: always
     ports:
       - '3000:3000'
