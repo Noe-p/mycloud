@@ -50,22 +50,15 @@ export const generateImageThumb = async (srcPath: string, destPath: string): Pro
     const tempJpeg = path.join(tempDir, `${base}-${Date.now()}.jpg`);
 
     // 1) heif-convert (production via libheif-examples)
+    // Note: heif-convert applique automatiquement l'orientation EXIF
     try {
       await execPromise(`heif-convert -q 90 "${srcPath}" "${tempJpeg}"`);
 
-      // Créer un fond flouté (cover) et poser l'image entière (inside) au centre pour éviter les bandes
-      const background = await sharp(tempJpeg)
-        .rotate()
-        .resize(300, 300, { fit: 'cover', position: 'center' })
-        .blur(20)
-        .toBuffer();
-
       const foreground = await sharp(tempJpeg)
-        .rotate()
         .resize(300, 300, { fit: 'inside', withoutEnlargement: false })
         .toBuffer();
 
-      await sharp(background)
+      await sharp(foreground)
         .composite([{ input: foreground, gravity: 'center' }])
         .jpeg({ quality: 82 })
         .toFile(destPath);
@@ -75,13 +68,14 @@ export const generateImageThumb = async (srcPath: string, destPath: string): Pro
       } catch {
         // Ignorer les erreurs de suppression
       }
-      console.log('Thumb HEIC généré (heif-convert + blurred background):', destPath);
+      console.log('Thumb HEIC généré (heif-convert', destPath);
       return;
     } catch (heifErr) {
       console.warn('heif-convert indisponible/échec, fallback ffmpeg:', heifErr);
     }
 
     // 2) Fallback ffmpeg: convertir en JPEG temporaire puis appliquer le même compositing (fond flouté)
+    // Note: ffmpeg ne gère pas toujours bien l'orientation HEIC, heif-convert est préféré
     const tempFfmpegJpeg = path.join(tempDir, `${base}-${Date.now()}-ff.jpg`);
     await new Promise<void>((resolve, reject) => {
       const cmd = `ffmpeg -y -i "${srcPath}" -map 0:v:0 -pix_fmt yuvj420p -q:v 2 "${tempFfmpegJpeg}"`;
@@ -97,13 +91,11 @@ export const generateImageThumb = async (srcPath: string, destPath: string): Pro
 
     try {
       const background = await sharp(tempFfmpegJpeg)
-        .rotate()
         .resize(300, 300, { fit: 'cover', position: 'center' })
         .blur(20)
         .toBuffer();
 
       const foreground = await sharp(tempFfmpegJpeg)
-        .rotate()
         .resize(300, 300, { fit: 'inside', withoutEnlargement: false })
         .toBuffer();
 

@@ -81,6 +81,7 @@ const convertHeicToJpeg = async (
   }
 
   // 1) heif-convert (libheif)
+  // Note: heif-convert applique automatiquement l'orientation EXIF
   try {
     await execPromise(`heif-convert -q 92 '${heicPath}' '${tempJpegPath}'`);
     console.log('[API /media] HEIC converti en JPEG avec heif-convert:', tempJpegPath);
@@ -91,6 +92,7 @@ const convertHeicToJpeg = async (
   }
 
   // 2) ffmpeg (sélection du premier stream vidéo couleur)
+  // Note: ffmpeg ne gère pas toujours bien l'orientation HEIC, heif-convert est préféré
   try {
     await execPromise(
       `ffmpeg -y -max_streams 10000 -i '${heicPath}' -map 0:v:0 -pix_fmt yuvj420p -q:v 1 '${tempJpegPath}'`,
