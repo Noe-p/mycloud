@@ -1,7 +1,7 @@
 {
   "home": {
-    "title": "Next.js Template — Modern Portfolio & Projects Showcase",
-    "description": "A modern Next.js template for developers to showcase their portfolio and projects. Built with TypeScript, Tailwind CSS, and best practices for performance and SEO.",
-    "keywords": "Next.js template, portfolio template, developer template, TypeScript, Tailwind CSS, modern web template, React template, SEO optimized template"
+    "title": "MyCloud — Your Personal Cloud on Raspberry Pi",
+    "description": "Personal and self-hosted cloud storage solution for Raspberry Pi. Manage your photos and media with a modern and secure interface. Built with Next.js, TypeScript and optimized for performance.",
+    "keywords": "personal cloud, Raspberry Pi, cloud storage, self-hosted, photo gallery, Next.js, TypeScript, private cloud, NAS, media server, photo storage"
   }
 }
