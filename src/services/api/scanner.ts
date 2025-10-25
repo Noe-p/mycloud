@@ -1,3 +1,4 @@
+import { atomicWriteJson, safeReadJson } from '@/services/fs-utils';
 import { ScanState } from '@/types/Scan';
 import fs from 'fs';
 import path from 'path';
@@ -34,7 +35,7 @@ export const readScanState = (): ScanState | null => {
  */
 export const writeScanState = (state: ScanState): void => {
   try {
-    fs.writeFileSync(scanStatePath, JSON.stringify(state, null, 2));
+    atomicWriteJson(scanStatePath, state, 2);
   } catch (e) {
     console.error('Erreur écriture scan state:', e);
   }
@@ -154,7 +155,7 @@ export const cleanOrphanThumbs = (validFileIds: Set<string>): number => {
   const exifCachePath = path.join(process.cwd(), 'public', 'exif-cache.json');
   if (fs.existsSync(exifCachePath)) {
     try {
-      const exifData: Record<string, string> = JSON.parse(fs.readFileSync(exifCachePath, 'utf-8'));
+      const exifData = safeReadJson<Record<string, string>>(exifCachePath) || {};
       const cleanedExifData: Record<string, string> = {};
       let exifEntriesRemoved = 0;
 
@@ -168,7 +169,7 @@ export const cleanOrphanThumbs = (validFileIds: Set<string>): number => {
       });
 
       if (exifEntriesRemoved > 0) {
-        fs.writeFileSync(exifCachePath, JSON.stringify(cleanedExifData, null, 2));
+        atomicWriteJson(exifCachePath, cleanedExifData, 2);
         console.log(`${exifEntriesRemoved} entrées EXIF orphelines supprimées`);
       }
     } catch (e) {
@@ -180,9 +181,8 @@ export const cleanOrphanThumbs = (validFileIds: Set<string>): number => {
   const fileCachePath = path.join(process.cwd(), 'public', 'file-cache.json');
   if (fs.existsSync(fileCachePath)) {
     try {
-      const fileData: Record<string, { filePath: string; sourceDir: string }> = JSON.parse(
-        fs.readFileSync(fileCachePath, 'utf-8'),
-      );
+      const fileData =
+        safeReadJson<Record<string, { filePath: string; sourceDir: string }>>(fileCachePath) || {};
       const cleanedFileData: Record<string, { filePath: string; sourceDir: string }> = {};
       let fileEntriesRemoved = 0;
 
@@ -196,7 +196,7 @@ export const cleanOrphanThumbs = (validFileIds: Set<string>): number => {
       });
 
       if (fileEntriesRemoved > 0) {
-        fs.writeFileSync(fileCachePath, JSON.stringify(cleanedFileData, null, 2));
+        atomicWriteJson(fileCachePath, cleanedFileData, 2);
         console.log(`${fileEntriesRemoved} entrées cache fichier orphelines supprimées`);
       }
     } catch (e) {

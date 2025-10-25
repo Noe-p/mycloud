@@ -1,3 +1,4 @@
+import { allowMethods } from '@/services/api/http';
 import { getMediaDirs, isImage, isVideo, rebuildFileCache } from '@/services/api/media';
 import {
   buildValidFileIdsSet,
@@ -33,9 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (!allowMethods(req, res, ['POST'])) return;
 
   // Vérifier si un scan est déjà en cours
   if (isScanInProgress()) {

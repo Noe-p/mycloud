@@ -1,3 +1,4 @@
+import { atomicWriteJson, safeReadJson } from '@/services/fs-utils';
 import { exiftool } from 'exiftool-vendored';
 import fs from 'fs';
 import path from 'path';
@@ -9,15 +10,14 @@ const CACHE_FILE = path.join(process.cwd(), 'public', 'exif-cache.json');
 // Charger le cache au démarrage
 function loadCache(): void {
   try {
-    if (fs.existsSync(CACHE_FILE)) {
-      const data: Record<string, string> = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8'));
-      Object.keys(data).forEach((key) => {
-        const value = data[key];
-        if (typeof value === 'string') {
-          dateCache.set(key, new Date(value));
-        }
-      });
-    }
+    const data = safeReadJson<Record<string, string>>(CACHE_FILE);
+    if (!data) return;
+    Object.keys(data).forEach((key) => {
+      const value = data[key];
+      if (typeof value === 'string') {
+        dateCache.set(key, new Date(value));
+      }
+    });
   } catch (error) {
     console.error('Error loading EXIF cache:', error);
   }
@@ -30,7 +30,7 @@ function saveCache(): void {
     dateCache.forEach((date, key) => {
       data[key] = date.toISOString();
     });
-    fs.writeFileSync(CACHE_FILE, JSON.stringify(data));
+    atomicWriteJson(CACHE_FILE, data, 2);
   } catch (error) {
     console.error('Error saving EXIF cache:', error);
   }

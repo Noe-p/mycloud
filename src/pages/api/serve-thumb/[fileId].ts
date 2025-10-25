@@ -18,15 +18,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Lire le fichier
-    const fileBuffer = fs.readFileSync(thumbPath);
-
     // Définir les headers appropriés
+    const stat = fs.statSync(thumbPath);
     res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Content-Length', stat.size);
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
 
-    // Envoyer le fichier
-    res.status(200).send(fileBuffer);
+    const stream = fs.createReadStream(thumbPath);
+    stream.on('error', (err) => {
+      console.error('Stream error serving thumbnail:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to serve thumbnail' });
+      } else {
+        res.end();
+      }
+    });
+    stream.pipe(res);
   } catch (error) {
     console.error('Error serving thumbnail:', error);
     return res.status(500).json({ error: 'Failed to serve thumbnail' });

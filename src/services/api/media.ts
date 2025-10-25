@@ -1,3 +1,4 @@
+import { atomicWriteJson } from '@/services/fs-utils';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
@@ -54,7 +55,7 @@ export const saveFileCache = (): void => {
     fileCache.forEach((value, key) => {
       data[key] = value;
     });
-    fs.writeFileSync(FILE_CACHE_PATH, JSON.stringify(data, null, 2));
+    atomicWriteJson(FILE_CACHE_PATH, data, 2);
     console.log(`Cache de fichiers sauvegardé: ${fileCache.size} fichiers`);
   } catch (error) {
     console.error('Erreur lors de la sauvegarde du cache de fichiers:', error);

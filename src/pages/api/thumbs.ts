@@ -1,9 +1,5 @@
-import {
-  isVideo as checkIsVideo,
-  getFileId,
-  getMediaDirs,
-  rebuildFileCache,
-} from '@/services/api/media';
+import { allowMethods, getPagination, requireMediaDirs } from '@/services/api/http';
+import { isVideo as checkIsVideo, getFileId, rebuildFileCache } from '@/services/api/media';
 import { scanMediaFiles } from '@/services/api/scanner';
 import { getThumbPath, getVideoDuration } from '@/services/api/thumbnail';
 import fs from 'fs';
@@ -11,17 +7,15 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const mediaDirs = getMediaDirs();
+  if (!allowMethods(req, res, ['GET'])) return;
 
-  if (mediaDirs.length === 0) {
-    return res.status(500).json({ error: 'MEDIA_DIRS not set' });
-  }
+  const mediaDirs = requireMediaDirs(res);
+  if (!mediaDirs) return;
 
   const startTime = Date.now();
 
   // Paramètres de pagination
-  const limit = parseInt(req.query.limit as string) || 100;
-  const offset = parseInt(req.query.offset as string) || 0;
+  const { limit, offset } = getPagination(req, { limit: 100, offset: 0 });
 
   // Scanner récursivement tous les fichiers médias
   const allMediaFiles = scanMediaFiles(mediaDirs);

@@ -1,23 +1,23 @@
 import { findAlbumByPath } from '@/services/api/album';
 import { getMediaDate } from '@/services/api/exif';
-import { isVideo as checkIsVideo, getFileId, getMediaDirs } from '@/services/api/media';
+import { allowMethods, getPagination, requireMediaDirs } from '@/services/api/http';
+import { isVideo as checkIsVideo, getFileId } from '@/services/api/media';
 import { getThumbUrl, getVideoDuration, thumbExists } from '@/services/api/thumbnail';
 import fs from 'fs';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!allowMethods(req, res, ['GET'])) return;
+
   const { albumPath } = req.query;
 
   if (!albumPath || typeof albumPath !== 'string') {
     return res.status(400).json({ error: 'Invalid album path' });
   }
 
-  const mediaDirs = getMediaDirs();
-
-  if (mediaDirs.length === 0) {
-    return res.status(500).json({ error: 'MEDIA_DIRS not set' });
-  }
+  const mediaDirs = requireMediaDirs(res);
+  if (!mediaDirs) return;
 
   // Trouver le dossier correspondant
   const albumInfo = findAlbumByPath(mediaDirs, albumPath);
@@ -29,12 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { targetDir, sourceDir } = albumInfo;
 
   // Paramètres de pagination
-  const limit = parseInt(
-    Array.isArray(req.query.limit) ? req.query.limit[0] : req.query.limit ?? '50',
-  );
-  const offset = parseInt(
-    Array.isArray(req.query.offset) ? req.query.offset[0] : req.query.offset ?? '0',
-  );
+  const { limit, offset } = getPagination(req, { limit: 50, offset: 0 });
 
   try {
     // Lister tous les fichiers du dossier (non récursif)

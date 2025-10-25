@@ -1,3 +1,4 @@
+import { allowMethods } from '@/services/api/http';
 import { findFileByFileId, getMediaDirs, isHeic } from '@/services/api/media';
 import { exec } from 'child_process';
 import fs from 'fs';
@@ -136,6 +137,7 @@ const convertHeicToJpeg = async (
 cleanOldTempFiles();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!allowMethods(req, res, ['GET'])) return;
   const { filename } = req.query;
 
   if (!filename || typeof filename !== 'string') {

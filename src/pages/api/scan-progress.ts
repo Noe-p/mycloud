@@ -1,11 +1,10 @@
+import { allowMethods } from '@/services/api/http';
 import { readScanState } from '@/services/api/scanner';
 import { getClientCount, registerSSEClient } from '@/services/api/sse';
 import { NextApiRequest, NextApiResponse } from 'next';
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (!allowMethods(req, res, ['GET'])) return;
 
   // Configuration SSE
   res.setHeader('Content-Type', 'text/event-stream');
