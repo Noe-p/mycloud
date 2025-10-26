@@ -65,7 +65,7 @@ export function AlbumDetailPage(): React.JSX.Element {
   const hasContent = displayedMedias.length > 0 || subAlbums.length > 0;
 
   // Calculer le nombre de skeletons à afficher
-  const mediaSkeletonCount = totalCount > 0 ? Math.min(totalCount, 12) : 12;
+  const mediaSkeletonCount = totalCount > 0 ? Math.min(totalCount, 100) : 100;
   const subAlbumsSkeletonCount = albumInfo?.subAlbums?.length || 0;
 
   return (

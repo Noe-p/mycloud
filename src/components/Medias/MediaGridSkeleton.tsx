@@ -6,7 +6,7 @@ interface MediaGridSkeletonProps {
   count?: number;
 }
 
-export function MediaGridSkeleton({ count = 10 }: MediaGridSkeletonProps): React.JSX.Element {
+export function MediaGridSkeleton({ count = 100 }: MediaGridSkeletonProps): React.JSX.Element {
   // Utilise la même grille que MediaGrid: 5 colonnes en mobile, 10 en md+
   return (
     <Grid10>
