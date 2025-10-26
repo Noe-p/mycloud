@@ -85,12 +85,14 @@ const convertHeicToJpeg = async (
   // Note: heif-convert applique automatiquement l'orientation EXIF
   try {
     await execPromise(`heif-convert -q 92 '${heicPath}' '${tempJpegPath}'`);
-    // Forcer l'orientation EXIF à 1 (normal) sur le JPEG généré
+    // Préserver l'orientation en copiant le tag Orientation du HEIC vers le JPEG
     try {
-      await execPromise(`exiftool -overwrite_original -Orientation=1 '${tempJpegPath}'`);
+      await execPromise(
+        `exiftool -overwrite_original -TagsFromFile '${heicPath}' -Orientation '${tempJpegPath}'`,
+      );
     } catch (exifErr) {
       console.warn(
-        '[API /media] exiftool non disponible ou erreur, orientation non forcée:',
+        '[API /media] exiftool non disponible ou erreur lors de la copie Orientation (fallback: laisser tel quel):',
         exifErr,
       );
     }
