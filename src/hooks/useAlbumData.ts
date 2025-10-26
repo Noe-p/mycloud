@@ -10,6 +10,7 @@ interface AlbumDataState {
   currentPage: number;
   isLoading: boolean;
   isLoadingMore: boolean;
+  isLoadingAlbumInfo: boolean;
   totalCount: number;
   hasMoreOnServer: boolean;
   albumInfo: Album | null;
@@ -61,10 +62,12 @@ export function useAlbumData(albumPath: string): UseAlbumDataReturn {
   const [albumInfo, setAlbumInfo] = React.useState<Album | null>(null);
   const [subAlbums, setSubAlbums] = React.useState<Album[]>([]);
   const [breadcrumbPath, setBreadcrumbPath] = React.useState<BreadcrumbItem[]>([]);
+  const [isLoadingAlbumInfo, setIsLoadingAlbumInfo] = React.useState(true);
   const subAlbumsCountRef = React.useRef<number>(0);
 
   // Charger les informations de l'album et ses sous-albums
   const loadAlbumInfo = React.useCallback(() => {
+    setIsLoadingAlbumInfo(true);
     void fetch('/api/albums')
       .then((res) => res.json())
       .then((data: { albums: Album[] }) => {
@@ -77,12 +80,14 @@ export function useAlbumData(albumPath: string): UseAlbumDataReturn {
           subAlbumsCountRef.current = album.subAlbums.length;
           setSubAlbums(album.subAlbums);
           setBreadcrumbPath(breadcrumb);
+          setIsLoadingAlbumInfo(false);
           // Mettre immédiatement à jour le total count avec les infos de l'album
           setTotalCount(album.mediaCount);
         }
       })
       .catch((error) => {
         console.error('Error loading album info:', error);
+        setIsLoadingAlbumInfo(false);
       });
   }, [albumPath]);
 
@@ -173,6 +178,7 @@ export function useAlbumData(albumPath: string): UseAlbumDataReturn {
     currentPage,
     isLoading,
     isLoadingMore,
+    isLoadingAlbumInfo,
     totalCount,
     hasMoreOnServer,
     albumInfo,

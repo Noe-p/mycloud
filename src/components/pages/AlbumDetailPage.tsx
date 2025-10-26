@@ -24,6 +24,7 @@ export function AlbumDetailPage(): React.JSX.Element {
     displayedMedias,
     isLoading,
     isLoadingMore,
+    isLoadingAlbumInfo,
     totalCount,
     hasMoreOnServer,
     albumInfo,
@@ -78,7 +79,7 @@ export function AlbumDetailPage(): React.JSX.Element {
 
         <SubAlbumsList
           subAlbums={subAlbums}
-          isLoading={isLoading && subAlbums.length === 0}
+          isLoading={isLoadingAlbumInfo}
           expectedCount={subAlbumsSkeletonCount}
         />
 
