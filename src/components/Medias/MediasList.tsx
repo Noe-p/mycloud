@@ -1,5 +1,5 @@
-import { Loader } from '@/components/Loaders/Loader';
 import { MediaGrid } from '@/components/Medias/MediaGrid';
+import { MediaGridSkeleton } from '@/components/Medias/MediaGridSkeleton';
 import { Col } from '@/components/utils/Flex';
 import { P16 } from '@/components/utils/Texts';
 import { Media } from '@/types/Media';
@@ -29,10 +29,8 @@ export function MediasList({
     <Col className="gap-4">
       <MediaGrid medias={medias} />
 
-      {/* Sentinel for infinite scroll */}
-      <div ref={observerTarget} className="h-20 flex items-center justify-center">
-        {isLoadingMore && <Loader />}
-      </div>
+      {/* Sentinel for infinite scroll with skeleton loader */}
+      <div ref={observerTarget}>{isLoadingMore && <MediaGridSkeleton count={10} />}</div>
 
       {/* End message */}
       {!hasMore && !hasMoreOnServer && (

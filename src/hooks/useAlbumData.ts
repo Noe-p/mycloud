@@ -61,6 +61,7 @@ export function useAlbumData(albumPath: string): UseAlbumDataReturn {
   const [albumInfo, setAlbumInfo] = React.useState<Album | null>(null);
   const [subAlbums, setSubAlbums] = React.useState<Album[]>([]);
   const [breadcrumbPath, setBreadcrumbPath] = React.useState<BreadcrumbItem[]>([]);
+  const subAlbumsCountRef = React.useRef<number>(0);
 
   // Charger les informations de l'album et ses sous-albums
   const loadAlbumInfo = React.useCallback(() => {
@@ -72,8 +73,12 @@ export function useAlbumData(albumPath: string): UseAlbumDataReturn {
 
         if (album) {
           setAlbumInfo(album);
+          // Stocker le nombre de sous-albums avant de les afficher
+          subAlbumsCountRef.current = album.subAlbums.length;
           setSubAlbums(album.subAlbums);
           setBreadcrumbPath(breadcrumb);
+          // Mettre immédiatement à jour le total count avec les infos de l'album
+          setTotalCount(album.mediaCount);
         }
       })
       .catch((error) => {

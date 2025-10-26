@@ -1,13 +1,13 @@
 'use client';
 
 import { AlbumCard } from '@/components/Albums/AlbumCard';
+import { AlbumCardSkeleton } from '@/components/Albums/AlbumCardSkeleton';
 import { Layout } from '@/components/utils/Layout';
 import { P16 } from '@/components/utils/Texts';
 import { useAlbumsContext, useAppContext } from '@/contexts';
 import { useScanProgress } from '@/hooks/useScanProgress';
 import { useTranslations } from 'next-intl';
 import React from 'react';
-import { FullPageLoader } from '../Loaders/FullPageLoader';
 
 interface Album {
   id: string;
@@ -28,6 +28,7 @@ export function HomePage(): React.JSX.Element {
   const { setAlbumCounts } = useAlbumsContext();
   const { scanProgress } = useScanProgress();
   const previousScanningRef = React.useRef<boolean>(false);
+  const previousAlbumCountRef = React.useRef<number>(0);
 
   // Réinitialiser l'album actuel sur la page d'accueil
   React.useEffect(() => {
@@ -40,6 +41,7 @@ export function HomePage(): React.JSX.Element {
       .then((res) => res.json())
       .then((data: { albums: Album[] }) => {
         setAlbums(data.albums);
+        previousAlbumCountRef.current = data.albums.length;
 
         // Compter seulement les médias et albums visibles (niveau racine)
         let totalMedias = 0;
@@ -80,18 +82,19 @@ export function HomePage(): React.JSX.Element {
 
   console.log(albums);
 
-  if (isLoading) {
-    return (
-      <Layout isProtected>
-        <FullPageLoader />
-      </Layout>
-    );
-  }
+  // Nombre de skeletons à afficher : utilise le nombre précédent ou une valeur par défaut
+  const skeletonCount = previousAlbumCountRef.current > 0 ? previousAlbumCountRef.current : 5;
 
   return (
     <Layout className="md:px-10 px-2" isProtected>
       <div className="mt-22">
-        {albums.length == 0 ? (
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: skeletonCount }).map((_, index) => (
+              <AlbumCardSkeleton key={index} />
+            ))}
+          </div>
+        ) : albums.length === 0 ? (
           <div className="text-center py-12">
             <P16 className="italic text-muted-foreground">{tCommons('generics.noAlbum')}</P16>
           </div>

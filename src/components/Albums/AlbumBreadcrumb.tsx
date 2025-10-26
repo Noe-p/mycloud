@@ -1,3 +1,4 @@
+import { AlbumBreadcrumbSkeleton } from '@/components/Albums/AlbumBreadcrumbSkeleton';
 import {
   Breadcrumb,
   BreadcrumbItem as BreadcrumbItemUI,
@@ -13,10 +14,18 @@ import React from 'react';
 
 interface AlbumBreadcrumbProps {
   breadcrumbPath: BreadcrumbItem[];
+  isLoading?: boolean;
 }
 
-export function AlbumBreadcrumb({ breadcrumbPath }: AlbumBreadcrumbProps): React.JSX.Element {
+export function AlbumBreadcrumb({
+  breadcrumbPath,
+  isLoading = false,
+}: AlbumBreadcrumbProps): React.JSX.Element {
   const t = useTranslations('common');
+
+  if (isLoading || breadcrumbPath.length === 0) {
+    return <AlbumBreadcrumbSkeleton />;
+  }
 
   return (
     <Breadcrumb>
