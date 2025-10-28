@@ -38,8 +38,6 @@ cd ~/mycloud
 Créez un fichier `docker-compose.yml` avec le contenu suivant :
 
 ```yaml
-version: '3.8'
-
 services:
   app:
     image: ghcr.io/noe-p/mycloud:latest

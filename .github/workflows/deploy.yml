@@ -48,7 +48,9 @@ jobs:
           context: .
           platforms: linux/arm64
           push: true
-          tags: ${{ env.GHCR_REGISTRY }}/${{ steps.meta.outputs.owner_lc }}/mycloud:${{ steps.meta.outputs.short_sha }}
+          tags: |
+            ${{ env.GHCR_REGISTRY }}/${{ steps.meta.outputs.owner_lc }}/mycloud:${{ steps.meta.outputs.short_sha }}
+            ${{ env.GHCR_REGISTRY }}/${{ steps.meta.outputs.owner_lc }}/mycloud:latest
           build-args: |
             NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
           cache-from: type=gha
